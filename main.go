@@ -49,6 +49,7 @@ func processClient(client net.Conn) {
 	tmp := make([]byte, 10048)
 	buffer := bytes.NewBuffer(buf)
 	readLen, err := client.Read(tmp)
+	defer client.Close()
 	if err != nil {
 
 		log.Println(err)
@@ -62,7 +63,6 @@ func processClient(client net.Conn) {
 	reader := bufio.NewReader(buffer)
 	req, err := http.ReadRequest(reader)
 
-
 	if err != nil {
 		log.Println(err)
 		return
@@ -71,16 +71,17 @@ func processClient(client net.Conn) {
 	log.Println("URL path: " + req.URL.Path)
 	log.Println("Request method: " + req.Method)
 
-
 	url := req.URL.Path
 	urlSlices := strings.Split(url, "/")
 	resourceName := urlSlices[len(urlSlices)-1]
 	fmt.Println("Got request: " + req.Method)
-
+	print(resourceName)
 	if req.Method == "GET" { // handle get
-		var res = http.Response{Close: true, StatusCode: 200
-		
-		}
+		var res = http.Response{Close: true,
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBuffer([]byte("asd")))}
+		res.Write(client)
+		//client.Close()
 
 	} else if req.Method == "POST" { //handle post
 
@@ -98,7 +99,6 @@ func processClient(client net.Conn) {
 	} else {
 		var res = http.Response{Close: true, StatusCode: 501}
 
-
 		err := res.Write(client)
 		if err != nil {
 			log.Println(err)
@@ -106,7 +106,6 @@ func processClient(client net.Conn) {
 		}
 
 		res.Write(client)
-
 
 		req.Close = true
 	}
