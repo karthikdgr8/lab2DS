@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
@@ -49,19 +50,19 @@ func processClient(client net.Conn) {
 	buffer := bytes.NewBuffer(buf)
 	readLen, err := client.Read(tmp)
 	if err != nil {
-<<<<<<< Updated upstream
+
 		log.Println(err)
-=======
+
 		fmt.Println("Error reading request: " + err.Error())
 		client.Close()
->>>>>>> Stashed changes
+
 		return
 	}
 	buffer.Write(tmp[:readLen])
 	reader := bufio.NewReader(buffer)
 	req, err := http.ReadRequest(reader)
 
-<<<<<<< Updated upstream
+
 	if err != nil {
 		log.Println(err)
 		return
@@ -70,12 +71,12 @@ func processClient(client net.Conn) {
 	log.Println("URL path: " + req.URL.Path)
 	log.Println("Request method: " + req.Method)
 
-=======
+
 	url := req.URL.Path
 	urlSlices := strings.Split(url, "/")
 	resourceName := urlSlices[len(urlSlices)-1]
 	fmt.Println("Got request: " + req.Method)
->>>>>>> Stashed changes
+
 	if req.Method == "GET" { // handle get
 		var res = http.Response{Close: true, StatusCode: 200
 		
@@ -97,15 +98,15 @@ func processClient(client net.Conn) {
 	} else {
 		var res = http.Response{Close: true, StatusCode: 501}
 
-<<<<<<< Updated upstream
+
 		err := res.Write(client)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-=======
+
 		res.Write(client)
->>>>>>> Stashed changes
+
 
 		req.Close = true
 	}
