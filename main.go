@@ -3,11 +3,20 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"encoding/json"
+	"io"
+	"log"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"os"
 )
+
+type stdResponse struct {
+	code    int
+	error   bool
+	message string
+}
 
 func main() {
 	port := os.Args[1]
@@ -15,17 +24,17 @@ func main() {
 }
 
 func startServer(port string) {
-	fmt.Print("Server starting on port: " + port)
+	log.Println("Server starting on port: " + port)
 	server, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {
-		fmt.Print("Error starting server: " + err.Error())
-		os.Exit(-1)
+		log.Fatal("Error starting server: " + err.Error())
 	}
 
 	for {
 		client, err := server.Accept()
 		if err != nil {
-			fmt.Println("Error accepting new client: " + err.Error())
+			log.Println("Error accepting new client: " + err.Error())
+			return
 		} else {
 			go processClient(client)
 		}
@@ -33,13 +42,14 @@ func startServer(port string) {
 }
 
 func processClient(client net.Conn) {
-	println("\nNew client accepted, processing request.")
+	log.Println("New client accepted,", client.RemoteAddr())
 	buf := make([]byte, 0) // do not use.
 	tmp := make([]byte, 10048)
 	buffer := bytes.NewBuffer(buf)
 	readLen, err := client.Read(tmp)
 	if err != nil {
-		fmt.Println("Error")
+		log.Println(err)
+		return
 	}
 	//for err == nil && readLen != -1 {
 	buffer.Write(tmp[:readLen])
@@ -52,16 +62,94 @@ func processClient(client net.Conn) {
 	reader := bufio.NewReader(buffer)
 	req, err := http.ReadRequest(reader)
 
-	println("URL: " + req.URL.Path)
-	fmt.Println("Got request: " + req.Method)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Println("URL path: " + req.URL.Path)
+	log.Println("Request method: " + req.Method)
+
 	if req.Method == "GET" { // handle get
 
 	} else if req.Method == "POST" { //handle post
 
+		multipartUpload(req)
+
+		var res = http.Response{Close: true, StatusCode: 200}
+
+		err := res.Write(client)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		req.Close = true
+
 	} else {
 		var res = http.Response{Close: true, StatusCode: 501}
-		res.Write(client)
+
+		err := res.Write(client)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
 		req.Close = true
 	}
+}
+
+func multipartUpload(req *http.Request) {
+
+	reader, err := req.MultipartReader()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	for {
+
+		part, err := reader.NextPart()
+
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			break
+		}
+
+		defer func(part *multipart.Part) {
+			err := part.Close()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}(part)
+		if part.FileName() == "" {
+			continue
+		}
+
+		d, err := os.Create("/Users/karthik/Public/tmp/" + part.FileName())
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		defer func(d *os.File) {
+			err := d.Close()
+			if err != nil {
+				return
+			}
+		}(d)
+		_, err = io.Copy(d, part)
+		if err != nil {
+			return
+		}
+	}
+}
+
+func sendResponse(code int, error bool, message string) []byte {
+	jsonifiedStr, err := json.Marshal(stdResponse{code: code, error: error, message: message})
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return jsonifiedStr
 }
