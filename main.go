@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"lab1DS/sem"
 	"log"
 	"mime/multipart"
 	"net"
@@ -23,6 +25,7 @@ type stdResponse struct {
 func main() {
 	port := os.Args[1]
 	startServer(port)
+
 }
 
 func startServer(port string) {
@@ -31,20 +34,22 @@ func startServer(port string) {
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
-
+	weigtedSem := sem.NewWeighted(10)
 	for {
+		semErr := weigtedSem.Acquire(context.Background(), 1)
 		client, err := server.Accept()
-		if err != nil {
+		if err != nil || semErr != nil {
 			log.Println("Error accepting new client: " + err.Error())
 			return
 		} else {
-			go processClient(client)
+			go processClient(client, weigtedSem)
 		}
 	}
 }
 
-func processClient(client net.Conn) {
+func processClient(client net.Conn, weighted *sem.Weighted) {
 	log.Println("New client accepted,", client.RemoteAddr())
+	defer weighted.Release(1)
 	buf := make([]byte, 0) // do not use.
 	tmp := make([]byte, 10048)
 	buffer := bytes.NewBuffer(buf)
