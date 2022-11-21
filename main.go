@@ -16,11 +16,13 @@ import (
 	"strings"
 )
 
-type stdResponse struct {
-	code    int
-	error   bool
-	message string
+type StdResponse struct {
+	Code    int
+	Error   bool
+	Message string
 }
+
+const filePath = "/Users/karthik/Public/tmp/"
 
 func main() {
 	port := os.Args[1]
@@ -53,14 +55,16 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	buf := make([]byte, 0) // do not use.
 	tmp := make([]byte, 10048)
 	buffer := bytes.NewBuffer(buf)
+
 	readLen, err := client.Read(tmp)
+
 	defer client.Close()
+
 	if err != nil {
 
 		log.Println(err)
 
 		fmt.Println("Error reading request: " + err.Error())
-		client.Close()
 
 		return
 	}
@@ -79,49 +83,70 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	url := req.URL.Path
 	urlSlices := strings.Split(url, "/")
 	resourceName := urlSlices[len(urlSlices)-1]
-	fmt.Println("Got request: " + req.Method)
-	print(resourceName)
+
 	if req.Method == "GET" { // handle get
-		var res = http.Response{Close: true,
-			StatusCode: 200,
-			Body:       io.NopCloser(bytes.NewBuffer([]byte("asd")))}
-		res.Write(client)
-		//client.Close()
+
+		if resourceName != "/" {
+
+			file, err := os.ReadFile(filePath + "" + resourceName + "")
+			mimeType := http.DetectContentType(file)
+
+			if err != nil {
+				log.Println(err)
+				sendResponse(400, true, err.Error(), client)
+				return
+			} else {
+
+				req.Header = make(http.Header)
+				req.Header.Set("Content-Type", mimeType)
+
+				var res = http.Response{Close: true,
+					StatusCode: 200,
+					Body:       io.NopCloser(bytes.NewBuffer(file)),
+					Header:     req.Header}
+
+				err := res.Write(client)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+			}
+		}
+
+		sendResponse(400, true, "Please enter the right file name or upload a file", client)
 
 	} else if req.Method == "POST" { //handle post
 
-		multipartUpload(req)
+		retVal := multipartUpload(req)
 
-		var res = http.Response{Close: true, StatusCode: 200}
+		var respCode = 0
+
+		if retVal {
+			respCode = http.StatusCreated
+		} else {
+			respCode = http.StatusBadRequest
+		}
+
+		var res = http.Response{Close: true, StatusCode: respCode}
 
 		err := res.Write(client)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		req.Close = true
+		//sendResponse(respCode, false, "File uploaded", client)
 
 	} else {
-		var res = http.Response{Close: true, StatusCode: 501}
-
-		err := res.Write(client)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		res.Write(client)
-
-		req.Close = true
+		sendResponse(501, true, "Only GET and POST methods are supported", client)
 	}
 }
 
-func multipartUpload(req *http.Request) {
+func multipartUpload(req *http.Request) bool {
 
 	reader, err := req.MultipartReader()
 	if err != nil {
 		log.Println(err)
-		return
+		return false
 	}
 	for {
 
@@ -144,10 +169,10 @@ func multipartUpload(req *http.Request) {
 			continue
 		}
 
-		d, err := os.Create("/Users/karthik/Public/tmp/" + part.FileName())
+		d, err := os.Create(filePath + part.FileName())
 		if err != nil {
 			log.Println(err)
-			return
+			return false
 		}
 		defer func(d *os.File) {
 			err := d.Close()
@@ -157,17 +182,27 @@ func multipartUpload(req *http.Request) {
 		}(d)
 		_, err = io.Copy(d, part)
 		if err != nil {
-			return
+			return true
 		}
 	}
+	return true
 }
 
-func sendResponse(code int, error bool, message string) []byte {
-	jsonifiedStr, err := json.Marshal(stdResponse{code: code, error: error, message: message})
+func sendResponse(code int, error bool, message string, client net.Conn) {
+	jsonifiedStr, err := json.Marshal(StdResponse{Code: code, Error: error, Message: message})
+
 	if err != nil {
 		log.Println(err)
-		return nil
+		return
 	}
 
-	return jsonifiedStr
+	var res = http.Response{Close: true,
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewReader(jsonifiedStr))}
+
+	err = res.Write(client)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }
