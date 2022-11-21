@@ -52,28 +52,42 @@ func startServer(port string) {
 func processClient(client net.Conn, weighted *sem.Weighted) {
 	log.Println("New client accepted,", client.RemoteAddr())
 	defer weighted.Release(1)
+	bufSize := 256
 	buf := make([]byte, 0) // do not use.
-	tmp := make([]byte, 10048)
+	tmp := make([]byte, bufSize)
 	buffer := bytes.NewBuffer(buf)
-
-	readLen, err := client.Read(tmp)
-
+	tot := 0
 	defer client.Close()
-
-	if err != nil {
-
-		log.Println(err)
-
-		fmt.Println("Error reading request: " + err.Error())
-
-		return
-	}
+	readLen, errOne := client.Read(tmp)
+	print("First read: ", readLen)
 	buffer.Write(tmp[:readLen])
+	defer client.Close()
+	for readLen == bufSize {
+		tot += readLen
+		print("read: ", readLen)
+		if errOne != nil {
+			if errOne == io.EOF {
+				print("EOF REACHED")
+				break
+			}
+			log.Println(errOne)
+			fmt.Println("Error reading request: " + errOne.Error())
+			client.Close()
+			return
+		}
+
+		fmt.Println("Error reading request: " + errOne.Error())
+		buffer.Write(tmp[:readLen])
+		readLen, errOne = client.Read(tmp)
+	}
+	if tot > bufSize {
+		buffer.Write([]byte("\n\r")) //Fucking golang
+	}
 	reader := bufio.NewReader(buffer)
 	req, err := http.ReadRequest(reader)
 
 	if err != nil {
-		log.Println(err)
+		log.Println("Error building request: ", err)
 		return
 	}
 
@@ -85,7 +99,6 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	resourceName := urlSlices[len(urlSlices)-1]
 
 	if req.Method == "GET" { // handle get
-
 		if resourceName != "/" {
 
 			file, err := os.ReadFile(filePath + "" + resourceName + "")
@@ -96,10 +109,8 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 				sendResponse(400, true, err.Error(), client)
 				return
 			} else {
-
 				req.Header = make(http.Header)
 				req.Header.Set("Content-Type", mimeType)
-
 				var res = http.Response{Close: true,
 					StatusCode: 200,
 					Body:       io.NopCloser(bytes.NewBuffer(file)),
