@@ -12,6 +12,8 @@ const goServerPort = 8080
 
 func callServer(r *http.Request) http.Response {
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
+	
+	println("Sending proxied req")
 	resp, err := c.Do(r)
 	if err != nil {
 		fmt.Printf("Error %s", err)

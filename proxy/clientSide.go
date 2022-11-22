@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func startServer(port string) {
+func startProxy(port string) {
 	log.Println("Server starting on port: " + port)
 	server, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {
@@ -79,10 +79,16 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 
 	url := req.URL.Path
 	urlSlices := strings.Split(url, "/")
-	print(urlSlices)
+	print("urlSlices", urlSlices)
 
 	if req.Method == "GET" { // handle get
-		// call karthik
+		print("Calling server\n")
+		resp := callServer(req)
+		print("Server responded: \n")
+		err := resp.Write(client)
+		if err != nil {
+			println("Proxy error, responding to client")
+		}
 	} else {
 		res := http.Response{StatusCode: 501, Close: true}
 		res.Write(client)
