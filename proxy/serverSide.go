@@ -4,15 +4,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
 const goServerIp = "localhost"
-const goServerPort = 8080
+const goServerPort = "8080"
 
 func callServer(r *http.Request) http.Response {
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
-	resp, err := c.Do(r)
+
+	path := r.URL.Path
+	reqURL := url.URL{Scheme: "http", Host: "localhost:8080", Path: path}
+	newReq := http.Request{URL: &reqURL}
+	println("Sending proxied req")
+	resp, err := c.Do(&newReq)
 	if err != nil {
 		fmt.Printf("Error %s", err)
 		return http.Response{StatusCode: http.StatusInternalServerError}
