@@ -10,15 +10,15 @@ import (
 const goServerIp = "localhost"
 const goServerPort = 8080
 
-func callServer() {
+func callServer(r *http.Request) http.Response {
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
-	req := http.Request{}
-	resp, err := c.Do(req)
+	resp, err := c.Do(r)
 	if err != nil {
 		fmt.Printf("Error %s", err)
-		return
+		return http.Response{StatusCode: http.StatusInternalServerError}
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	fmt.Printf("Body : %s", body)
+	return *resp
 }
