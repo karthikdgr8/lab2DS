@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"lab1DS/sem"
 	"log"
@@ -58,31 +57,24 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	buffer := bytes.NewBuffer(buf)
 	tot := 0
 	defer client.Close()
-	readLen, errOne := client.Read(tmp)
-	print("First read: ", readLen)
-	buffer.Write(tmp[:readLen])
-	defer client.Close()
-	for readLen == bufSize {
-		tot += readLen
-		print("read: ", readLen)
-		if errOne != nil {
-			if errOne == io.EOF {
+	for {
+		readLen, err := client.Read(tmp)
+		if err != nil {
+			if err == io.EOF {
 				print("EOF REACHED")
 				break
 			}
-			log.Println(errOne)
-			fmt.Println("Error reading request: " + errOne.Error())
+			log.Println("Error inside", err)
 			client.Close()
-			return
 		}
 
-		fmt.Println("Error reading request: " + errOne.Error())
 		buffer.Write(tmp[:readLen])
-		readLen, errOne = client.Read(tmp)
+		tot += readLen
+		if readLen < 256 && tot != 0 {
+			break
+		}
 	}
-	if tot > bufSize {
-		buffer.Write([]byte("\n\r")) //Fucking golang
-	}
+
 	reader := bufio.NewReader(buffer)
 	req, err := http.ReadRequest(reader)
 
@@ -97,10 +89,11 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	url := req.URL.Path
 	urlSlices := strings.Split(url, "/")
 	resourceName := urlSlices[len(urlSlices)-1]
+	println("resourceName", resourceName)
 
 	if req.Method == "GET" { // handle get
-		if resourceName != "/" {
-
+		if resourceName != "" {
+			println("In Here")
 			file, err := os.ReadFile(filePath + "" + resourceName + "")
 			mimeType := http.DetectContentType(file)
 
