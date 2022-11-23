@@ -61,7 +61,6 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 		readLen, err := client.Read(tmp)
 		if err != nil {
 			if err == io.EOF {
-				print("EOF REACHED")
 				break
 			}
 			log.Println("Error inside", err)

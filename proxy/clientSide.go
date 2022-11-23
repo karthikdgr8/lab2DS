@@ -52,7 +52,6 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 		readLen, err := client.Read(tmp)
 		if err != nil {
 			if err == io.EOF {
-				print("EOF REACHED")
 				break
 			}
 			log.Println("Error inside", err)
@@ -89,7 +88,12 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 			log.Println(err)
 		}
 	} else {
-		sendResponse(http.StatusNotImplemented, true, err.Error(), client)
+		res := http.Response{StatusCode: 501, Close: true}
+		err := res.Write(client)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
 
 }
