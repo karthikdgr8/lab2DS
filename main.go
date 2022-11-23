@@ -35,15 +35,15 @@ func startServer(port string) {
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
-	weigtedSem := sem.NewWeighted(10)
+	weightedSem := sem.NewWeighted(10)
 	for {
-		semErr := weigtedSem.Acquire(context.Background(), 1)
+		semErr := weightedSem.Acquire(context.Background(), 1)
 		client, err := server.Accept()
 		if err != nil || semErr != nil {
 			log.Println("Error accepting new client: " + err.Error())
 			return
 		} else {
-			go processClient(client, weigtedSem)
+			go processClient(client, weightedSem)
 		}
 	}
 }
@@ -206,7 +206,6 @@ func sendResponse(code int, error bool, message string, client net.Conn) {
 
 	err = res.Write(client)
 	if err != nil {
-		log.Println(err)
 		return
 	}
 }

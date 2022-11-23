@@ -25,16 +25,16 @@ func startProxy(port string) {
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
-	weigtedSem := sem.NewWeighted(10)
+	weightedSem := sem.NewWeighted(10)
 	for {
-		semErr := weigtedSem.Acquire(context.Background(), 1)
+		semErr := weightedSem.Acquire(context.Background(), 1)
 		client, err := server.Accept()
 		if err != nil || semErr != nil {
 			log.Println("Error accepting new client: " + err.Error())
 			sendResponse(http.StatusInternalServerError, true, err.Error(), client)
 			return
 		} else {
-			go processClient(client, weigtedSem)
+			go processClient(client, weightedSem)
 		}
 	}
 }
@@ -69,7 +69,6 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	reader := bufio.NewReader(buffer)
 	req, err := http.ReadRequest(reader)
 	if err != nil {
-		log.Println("Error building request: ", err)
 		sendResponse(http.StatusInternalServerError, true, err.Error(), client)
 		return
 	}
@@ -109,7 +108,6 @@ func sendResponse(code int, error bool, message string, client net.Conn) {
 
 	err = res.Write(client)
 	if err != nil {
-		log.Println(err)
 		return
 	}
 }
