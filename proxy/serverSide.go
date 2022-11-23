@@ -11,6 +11,7 @@ func callServer(r *http.Request) http.Response {
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
 
 	path := r.URL.Path
+	println("Path", path)
 	reqURL := url.URL{Scheme: "http", Host: serverIP + ":" + serverPort, Path: path}
 	newReq := http.Request{URL: &reqURL}
 

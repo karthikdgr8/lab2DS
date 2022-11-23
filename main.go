@@ -31,7 +31,7 @@ func main() {
 
 func startServer(port string) {
 	log.Println("Server starting on port: " + port)
-	server, err := net.Listen("tcp", "localhost:"+port)
+	server, err := net.Listen("tcp", "0.0.0.0:"+port)
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
@@ -117,7 +117,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 			}
 		}
 
-		sendResponse(400, true, "Please enter the right file name or upload a file", client)
+		sendResponse(http.StatusNotFound, true, "Please enter the right file name or upload a file", client)
 
 	} else if req.Method == "POST" { //handle post
 
@@ -141,7 +141,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 		//sendResponse(respCode, false, "File uploaded", client)
 
 	} else {
-		sendResponse(501, true, "Only GET and POST methods are supported", client)
+		sendResponse(http.StatusNotImplemented, true, "Only GET and POST methods are supported", client)
 	}
 }
 
@@ -201,7 +201,7 @@ func sendResponse(code int, error bool, message string, client net.Conn) {
 	}
 
 	var res = http.Response{Close: true,
-		StatusCode: 200,
+		StatusCode: code,
 		Body:       io.NopCloser(bytes.NewReader(jsonifiedStr))}
 
 	err = res.Write(client)

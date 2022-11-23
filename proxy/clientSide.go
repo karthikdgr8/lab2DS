@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"lab1DS/sem"
 	"log"
@@ -12,9 +13,15 @@ import (
 	"strings"
 )
 
+type StdResponse struct {
+	Code    int
+	Error   bool
+	Message string
+}
+
 func startProxy(port string) {
 	log.Println("Server starting on port: " + port)
-	server, err := net.Listen("tcp", "localhost:"+port)
+	server, err := net.Listen("tcp", "0.0.0.0:"+port)
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
@@ -24,6 +31,7 @@ func startProxy(port string) {
 		client, err := server.Accept()
 		if err != nil || semErr != nil {
 			log.Println("Error accepting new client: " + err.Error())
+			sendResponse(http.StatusInternalServerError, true, err.Error(), client)
 			return
 		} else {
 			go processClient(client, weigtedSem)
@@ -60,9 +68,9 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 
 	reader := bufio.NewReader(buffer)
 	req, err := http.ReadRequest(reader)
-
 	if err != nil {
 		log.Println("Error building request: ", err)
+		sendResponse(http.StatusInternalServerError, true, err.Error(), client)
 		return
 	}
 
@@ -74,20 +82,34 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	print("urlSlices", urlSlices)
 
 	if req.Method == "GET" { // handle get
-		print("Calling server\n")
+
 		resp := callServer(req)
-		print("Server responded: \n")
+
 		err := resp.Write(client)
 		if err != nil {
 			log.Println(err)
 		}
 	} else {
-		res := http.Response{StatusCode: 501, Close: true}
-		err := res.Write(client)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		sendResponse(http.StatusNotImplemented, true, err.Error(), client)
 	}
 
+}
+
+func sendResponse(code int, error bool, message string, client net.Conn) {
+	jsonifiedStr, err := json.Marshal(StdResponse{Code: code, Error: error, Message: message})
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	var res = http.Response{Close: true,
+		StatusCode: code,
+		Body:       io.NopCloser(bytes.NewReader(jsonifiedStr))}
+
+	err = res.Write(client)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }
