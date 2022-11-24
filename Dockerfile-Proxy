@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+
+FROM golang:1.16-alpine
+
+WORKDIR /app
+
+COPY ./go.mod ./
+
+RUN mkdir -p proxy
+
+COPY ./proxy/*.go ./proxy
+COPY ./sem ./sem
+
+WORKDIR /app/proxy
+
+RUN go mod download
+
+RUN go build -o /proxy
+
+EXPOSE 8081
+
+CMD [ "/proxy","8081" ]
