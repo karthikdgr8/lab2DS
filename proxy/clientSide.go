@@ -10,7 +10,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"strings"
 )
 
 type StdResponse struct {
@@ -75,23 +74,19 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	log.Println("URL path: " + req.URL.Path)
 	log.Println("Request method: " + req.Method)
 
-	url := req.URL.Path
-	urlSlices := strings.Split(url, "/")
-	print("urlSlices", urlSlices)
-
 	if req.Method == "GET" { // handle get
 
 		resp := callServer(req)
 
 		err := resp.Write(client)
 		if err != nil {
-			log.Println(err)
+			log.Println("Write Err", err)
 		}
 	} else {
 		res := http.Response{StatusCode: 501, Close: true}
 		err := res.Write(client)
 		if err != nil {
-			log.Println(err)
+			log.Println("501 Error", err)
 			return
 		}
 	}

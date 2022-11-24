@@ -21,15 +21,18 @@ type StdResponse struct {
 	Message string
 }
 
-const filePath = "/Users/karthik/Public/tmp/"
+var filePath = os.Getenv("FILE_PATH")
 
 func main() {
 	port := os.Args[1]
 	startServer(port)
-
 }
 
 func startServer(port string) {
+
+	if filePath == "" {
+		filePath = "/Users/karthik/Public/tmp/"
+	}
 	log.Println("Server starting on port: " + port)
 	server, err := net.Listen("tcp", "0.0.0.0:"+port)
 	if err != nil {
