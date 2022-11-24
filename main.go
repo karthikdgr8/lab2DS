@@ -91,11 +91,27 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	url := req.URL.Path
 	urlSlices := strings.Split(url, "/")
 	resourceName := urlSlices[len(urlSlices)-1]
-	println("resourceName", resourceName)
 
 	if req.Method == "GET" { // handle get
 		if resourceName != "" {
-			println("In Here")
+
+			sliceFileName := strings.Split(resourceName, ".")
+			ext := sliceFileName[len(sliceFileName)-1]
+
+			allowedExts := [6]string{"html", "txt", "gif", "jpeg", "jpg", "css"}
+
+			i := -1
+			for i < len(allowedExts) {
+				i++
+				if i == len(allowedExts) {
+					sendResponse(http.StatusNotImplemented, true, ext+" is not allowed", client)
+					return
+				}
+				if ext == allowedExts[i] {
+					break
+				}
+			}
+
 			file, err := os.ReadFile(filePath + "" + resourceName + "")
 			mimeType := http.DetectContentType(file)
 
@@ -173,6 +189,22 @@ func multipartUpload(req *http.Request) bool {
 		}(part)
 		if part.FileName() == "" {
 			continue
+		}
+
+		sliceFileName := strings.Split(part.FileName(), ".")
+		ext := sliceFileName[len(sliceFileName)-1]
+
+		allowedExts := [6]string{"html", "txt", "gif", "jpeg", "jpg", "css"}
+
+		i := -1
+		for i < len(allowedExts) {
+			i++
+			if i == len(allowedExts) {
+				return false
+			}
+			if ext == allowedExts[i] {
+				break
+			}
 		}
 
 		d, err := os.Create(filePath + part.FileName())
