@@ -25,6 +25,10 @@ Which then forwards the request to the actual webserver.
 */
 
 func startProxy(port string) {
+
+	/*
+		Different bind addresses for local and docker instances
+	*/
 	var bindAddr string
 	if serverIP == "" && serverPort == "" {
 		bindAddr = "localhost"
@@ -53,7 +57,7 @@ func startProxy(port string) {
 
 /*
 *
-This function handles each new client request, and is run on a seperate go-routine.
+This function handles each new client request, and is run on a separate go-routine.
 */
 func processClient(client net.Conn, weighted *sem.Weighted) {
 	log.Println("New client accepted,", client.RemoteAddr())
@@ -113,7 +117,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 
 }
 
-//Function to send response to client.
+// Function to send response to client.
 func sendResponse(code int, error bool, message string, client net.Conn) {
 	jsonifiedStr, err := json.Marshal(StdResponse{Code: code, Error: error, Message: message})
 

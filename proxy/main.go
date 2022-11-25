@@ -14,6 +14,10 @@ func main() {
 	serverIP = os.Getenv("SERVER_IP")
 	serverPort = os.Getenv("SERVER_PORT")
 
+	/*
+		If environment variables above are not set, it means we are running locally so we need to expect command line arguments
+	*/
+
 	if serverIP == "" {
 		serverIP = os.Args[2]
 	}
