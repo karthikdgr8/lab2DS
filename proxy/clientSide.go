@@ -62,34 +62,15 @@ This function handles each new client request, and is run on a separate go-routi
 func processClient(client net.Conn, weighted *sem.Weighted) {
 	log.Println("New client accepted,", client.RemoteAddr())
 	defer weighted.Release(1)
-	bufSize := 256
-	buf := make([]byte, 0)       // do not use.
-	tmp := make([]byte, bufSize) //Temporary buffer for holding data read from socket.
-	buffer := bytes.NewBuffer(buf)
-	tot := 0
-	defer client.Close()
-	for {
-		readLen, err := client.Read(tmp)
+	defer func(client net.Conn) {
+		err := client.Close()
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			err := client.Close()
-			if err != nil {
-				log.Println("Close error", err)
-				return
-			}
+			sendResponse(http.StatusInternalServerError, false, "Error Closing conn", client)
 		}
+	}(client)
 
-		buffer.Write(tmp[:readLen]) // Write read bytes to byteBuffer.
-		tot += readLen
-		if readLen < 256 && tot != 0 {
-			break
-		}
-	}
-
-	reader := bufio.NewReader(buffer)
-	req, err := http.ReadRequest(reader) // Parse the http-request.
+	reader := bufio.NewReader(client)
+	req, err := http.ReadRequest(reader) // Parse the http-request
 	if err != nil {
 		sendResponse(http.StatusInternalServerError, true, err.Error(), client)
 		return

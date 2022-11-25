@@ -72,35 +72,18 @@ This function is always called on separate go-routines, and handles all the clie
 */
 func processClient(client net.Conn, weighted *sem.Weighted) {
 	log.Println("New client accepted,", client.RemoteAddr())
+
 	defer weighted.Release(1)
-	bufSize := 256
-	buf := make([]byte, 0) // do not use.
-	tmp := make([]byte, bufSize)
-	buffer := bytes.NewBuffer(buf)
-	tot := 0
-	defer client.Close()
-	for {
-		readLen, err := client.Read(tmp) // Read data from the socket.
+
+	defer func(client net.Conn) {
+		err := client.Close()
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			err := client.Close()
-			if err != nil {
-				log.Println("Close", err)
-				return
-			}
+			sendResponse(http.StatusInternalServerError, false, "Error Closing conn", client)
 		}
+	}(client)
 
-		buffer.Write(tmp[:readLen]) // Write all read data out to a byte-buffer.
-		tot += readLen
-		if readLen < 256 && tot != 0 {
-			break
-		}
-	}
-
-	reader := bufio.NewReader(buffer) //Parse HTTP
-	req, err := http.ReadRequest(reader)
+	reader := bufio.NewReader(client)
+	req, err := http.ReadRequest(reader) // Parse the http-request
 
 	if err != nil {
 		log.Println("Error building request: ", err)
@@ -120,75 +103,78 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 
 	/*------------------------GET---------------------*/
 	if req.Method == "GET" { // handle get
-		if resourceName != "" {
 
-			sliceFileName := strings.Split(resourceName, ".")
-			ext := sliceFileName[len(sliceFileName)-1]
-
-			allowedExts := [6]string{"html", "txt", "gif", "jpeg", "jpg", "css"}
-
-			i := -1
-			for i < len(allowedExts) {
-				i++
-				if i == len(allowedExts) {
-					sendResponse(http.StatusNotImplemented, true, ext+" is not allowed", client)
-					return
-				}
-				if ext == allowedExts[i] {
-					break
-				}
-			}
-
-			file, err := os.ReadFile(filePath + "" + resourceName + "")
-			mimeType := http.DetectContentType(file) // Get Content-Type for adding it to the header
-
-			if err != nil {
-				log.Println(err)
-				sendResponse(400, true, err.Error(), client)
-				return
-			} else {
-				req.Header = make(http.Header)
-				req.Header.Set("Content-Type", mimeType) // Add the above Content-Type to the header
-				var res = http.Response{Close: true,
-					StatusCode: 200,
-					Body:       io.NopCloser(bytes.NewBuffer(file)),
-					Header:     req.Header}
-
-				err := res.Write(client)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-			}
-		}
+		getHandler(resourceName, client, req)
 
 		sendResponse(http.StatusNotFound, true, "Please enter the right file name or upload a file", client)
 
 		/*------------------------POST---------------------*/
 	} else if req.Method == "POST" { //handle post
 
-		retVal := multipartUpload(req)
-
-		var respCode = 0
-
-		if retVal {
-			respCode = http.StatusCreated
-		} else {
-			respCode = http.StatusBadRequest
-		}
-
-		var res = http.Response{Close: true, StatusCode: respCode}
-
-		err := res.Write(client)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		//sendResponse(respCode, false, "File uploaded", client)
+		postHandler(req, client)
 
 	} else {
 		sendResponse(http.StatusNotImplemented, true, "Only GET and POST methods are supported", client)
 	}
+}
+
+func getHandler(resourceName string, client net.Conn, req *http.Request) {
+	if resourceName != "" {
+
+		sliceFileName := strings.Split(resourceName, ".")
+		ext := sliceFileName[len(sliceFileName)-1]
+
+		allowedExts := [6]string{"html", "txt", "gif", "jpeg", "jpg", "css"}
+
+		i := -1
+		for i < len(allowedExts) {
+			i++
+			if i == len(allowedExts) {
+				sendResponse(http.StatusNotImplemented, true, ext+" is not allowed", client)
+				return
+			}
+			if ext == allowedExts[i] {
+				break
+			}
+		}
+
+		file, err := os.ReadFile(filePath + "" + resourceName + "")
+		mimeType := http.DetectContentType(file) // Get Content-Type for adding it to the header
+
+		if err != nil {
+			log.Println(err)
+			sendResponse(400, true, err.Error(), client)
+			return
+		} else {
+			req.Header = make(http.Header)
+			req.Header.Set("Content-Type", mimeType) // Add the above Content-Type to the header
+			var res = http.Response{Close: true,
+				StatusCode: 200,
+				Body:       io.NopCloser(bytes.NewBuffer(file)),
+				Header:     req.Header}
+
+			err := res.Write(client)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+	}
+}
+
+func postHandler(req *http.Request, client net.Conn) {
+
+	retVal := multipartUpload(req)
+
+	var respCode = 0
+
+	if retVal {
+		respCode = http.StatusCreated
+	} else {
+		respCode = http.StatusBadRequest
+	}
+
+	sendResponse(respCode, false, "File uploaded", client)
 }
 
 func multipartUpload(req *http.Request) bool {
@@ -248,7 +234,7 @@ func multipartUpload(req *http.Request) bool {
 		}(d)
 		_, err = io.Copy(d, part) // Copy the file from request to the newly created file on the the file system
 		if err != nil {
-			return true
+			return false
 		}
 	}
 	return true // This will throw a 201 Created Response
