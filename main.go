@@ -34,7 +34,7 @@ func startServer(port string) {
 		filePath = "/Users/karthik/Public/tmp/"
 	}
 	log.Println("Server starting on port: " + port)
-	server, err := net.Listen("tcp", "0.0.0.0:"+port)
+	server, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
@@ -66,8 +66,11 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 			if err == io.EOF {
 				break
 			}
-			log.Println("Error inside", err)
-			client.Close()
+			err := client.Close()
+			if err != nil {
+				log.Println("Close", err)
+				return
+			}
 		}
 
 		buffer.Write(tmp[:readLen])
