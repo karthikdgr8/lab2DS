@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+/**
+The server side of the proxy. This function is called by the client-thread, and return the response given by the
+actual server.
+*/
 func callServer(r *http.Request) http.Response {
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
 

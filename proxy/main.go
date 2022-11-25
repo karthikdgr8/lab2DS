@@ -5,6 +5,10 @@ import "os"
 var serverIP string
 var serverPort string
 
+/*
+*
+Function to start the proxy
+*/
 func main() {
 	port := os.Args[1]
 	serverIP = os.Getenv("SERVER_IP")

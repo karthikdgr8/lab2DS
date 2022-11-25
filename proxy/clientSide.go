@@ -18,10 +18,14 @@ type StdResponse struct {
 	Message string
 }
 
+/**
+Our implementation of a proxy server. This file contains the code for handling incoming connections
+to the proxy. Once a connection is established, the request is read, and forwarded to the "serverSide"
+Which then forwards the request to the actual webserver.
+*/
+
 func startProxy(port string) {
-
 	var bindAddr string
-
 	if serverIP == "" && serverPort == "" {
 		bindAddr = "localhost"
 	} else {
@@ -33,13 +37,13 @@ func startProxy(port string) {
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
-	weightedSem := sem.NewWeighted(10)
+	weightedSem := sem.NewWeighted(10) // Semaphore to ensure no more than 10 simultaneous threads.
 	for {
-		semErr := weightedSem.Acquire(context.Background(), 1)
+		semErr := weightedSem.Acquire(context.Background(), 1) // Grab one per client
 		client, err := server.Accept()
 		if err != nil || semErr != nil {
 			log.Println("Error accepting new client: " + err.Error())
-			sendResponse(http.StatusInternalServerError, true, err.Error(), client)
+			sendResponse(http.StatusInternalServerError, true, err.Error(), client) // In case error.
 			return
 		} else {
 			go processClient(client, weightedSem)
@@ -47,12 +51,16 @@ func startProxy(port string) {
 	}
 }
 
+/*
+*
+This function handles each new client request, and is run on a seperate go-routine.
+*/
 func processClient(client net.Conn, weighted *sem.Weighted) {
 	log.Println("New client accepted,", client.RemoteAddr())
 	defer weighted.Release(1)
 	bufSize := 256
-	buf := make([]byte, 0) // do not use.
-	tmp := make([]byte, bufSize)
+	buf := make([]byte, 0)       // do not use.
+	tmp := make([]byte, bufSize) //Temporary buffer for holding data read from socket.
 	buffer := bytes.NewBuffer(buf)
 	tot := 0
 	defer client.Close()
@@ -69,7 +77,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 			}
 		}
 
-		buffer.Write(tmp[:readLen])
+		buffer.Write(tmp[:readLen]) // Write read bytes to byteBuffer.
 		tot += readLen
 		if readLen < 256 && tot != 0 {
 			break
@@ -77,7 +85,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	}
 
 	reader := bufio.NewReader(buffer)
-	req, err := http.ReadRequest(reader)
+	req, err := http.ReadRequest(reader) // Parse the http-request.
 	if err != nil {
 		sendResponse(http.StatusInternalServerError, true, err.Error(), client)
 		return
@@ -90,11 +98,11 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 
 		resp := callServer(req)
 
-		err := resp.Write(client)
+		err := resp.Write(client) // Send response to client.
 		if err != nil {
 			log.Println("Write Err", err)
 		}
-	} else {
+	} else { //Nothing other than get should be proxied.
 		res := http.Response{StatusCode: 501, Close: true}
 		err := res.Write(client)
 		if err != nil {
@@ -105,6 +113,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 
 }
 
+//Function to send response to client.
 func sendResponse(code int, error bool, message string, client net.Conn) {
 	jsonifiedStr, err := json.Marshal(StdResponse{Code: code, Error: error, Message: message})
 

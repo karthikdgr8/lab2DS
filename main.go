@@ -28,6 +28,10 @@ func main() {
 	startServer(port)
 }
 
+/*
+*
+Start the webserver, and begin listening for incoming clients.
+*/
 func startServer(port string) {
 
 	var bindAddr string
@@ -44,9 +48,9 @@ func startServer(port string) {
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
-	weightedSem := sem.NewWeighted(10)
+	weightedSem := sem.NewWeighted(10) //Semaphore to ensure no more than 10 concurrent clients.
 	for {
-		semErr := weightedSem.Acquire(context.Background(), 1)
+		semErr := weightedSem.Acquire(context.Background(), 1) //Grab one per client
 		client, err := server.Accept()
 		if err != nil || semErr != nil {
 			log.Println("Error accepting new client: " + err.Error())
@@ -57,6 +61,10 @@ func startServer(port string) {
 	}
 }
 
+/**
+Function to handle incoming requests.
+This function is always called on seperate go-routines, and handles all the client data.
+*/
 func processClient(client net.Conn, weighted *sem.Weighted) {
 	log.Println("New client accepted,", client.RemoteAddr())
 	defer weighted.Release(1)
@@ -67,7 +75,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	tot := 0
 	defer client.Close()
 	for {
-		readLen, err := client.Read(tmp)
+		readLen, err := client.Read(tmp) // Read data from the socket.
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -79,14 +87,14 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 			}
 		}
 
-		buffer.Write(tmp[:readLen])
+		buffer.Write(tmp[:readLen]) // Write all read data out to a byte-buffer.
 		tot += readLen
 		if readLen < 256 && tot != 0 {
 			break
 		}
 	}
 
-	reader := bufio.NewReader(buffer)
+	reader := bufio.NewReader(buffer) //Parse HTTP
 	req, err := http.ReadRequest(reader)
 
 	if err != nil {
@@ -101,6 +109,11 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 	urlSlices := strings.Split(url, "/")
 	resourceName := urlSlices[len(urlSlices)-1]
 
+	/*
+		This if statement distinguishes between the different HTTP methods, and handles each apropriatelu
+	*/
+
+	/*------------------------GET---------------------*/
 	if req.Method == "GET" { // handle get
 		if resourceName != "" {
 
@@ -146,6 +159,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 
 		sendResponse(http.StatusNotFound, true, "Please enter the right file name or upload a file", client)
 
+		/*------------------------POST---------------------*/
 	} else if req.Method == "POST" { //handle post
 
 		retVal := multipartUpload(req)
@@ -235,6 +249,9 @@ func multipartUpload(req *http.Request) bool {
 	return true
 }
 
+/**
+Function for sending responses to the client.
+*/
 func sendResponse(code int, error bool, message string, client net.Conn) {
 	jsonifiedStr, err := json.Marshal(StdResponse{Code: code, Error: error, Message: message})
 
