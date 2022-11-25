@@ -30,11 +30,17 @@ func main() {
 
 func startServer(port string) {
 
+	var bindAddr string
+
 	if filePath == "" {
 		filePath = "/Users/karthik/Public/tmp/"
+		bindAddr = "localhost"
+	} else {
+		bindAddr = "0.0.0.0"
 	}
+
 	log.Println("Server starting on port: " + port)
-	server, err := net.Listen("tcp", "localhost:"+port)
+	server, err := net.Listen("tcp", bindAddr+":"+port)
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}

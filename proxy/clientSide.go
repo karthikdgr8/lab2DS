@@ -19,8 +19,17 @@ type StdResponse struct {
 }
 
 func startProxy(port string) {
+
+	var bindAddr string
+
+	if serverIP == "" && serverPort == "" {
+		bindAddr = "localhost"
+	} else {
+		bindAddr = "0.0.0.0"
+	}
+
 	log.Println("Server starting on port: " + port)
-	server, err := net.Listen("tcp", "127.0.0.1:"+port)
+	server, err := net.Listen("tcp", bindAddr+":"+port)
 	if err != nil {
 		log.Fatal("Error starting server: " + err.Error())
 	}
