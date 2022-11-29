@@ -88,12 +88,7 @@ func processClient(client net.Conn, weighted *sem.Weighted) {
 			log.Println("Write Err", err)
 		}
 	} else { //Nothing other than get should be proxied.
-		res := http.Response{StatusCode: 501, Close: true}
-		err := res.Write(client)
-		if err != nil {
-			log.Println("501 Error", err)
-			return
-		}
+		sendResponse(http.StatusNotImplemented, true, "Only GET is implemented", client)
 	}
 
 }
