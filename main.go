@@ -174,7 +174,7 @@ func postHandler(req *http.Request, client net.Conn) {
 		respCode = http.StatusBadRequest
 	}
 
-	sendResponse(respCode, false, "File uploaded", client)
+	sendResponse(respCode, !retVal, "File uploaded", client)
 }
 
 func multipartUpload(req *http.Request) bool {
