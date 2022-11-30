@@ -148,7 +148,10 @@ func getHandler(resourceName string, client net.Conn, req *http.Request) {
 		} else {
 			req.Header = make(http.Header)
 			req.Header.Set("Content-Type", mimeType) // Add the above Content-Type to the header
-			var res = http.Response{Close: true,
+			var res = http.Response{Proto: "HTTP/1.0",
+				ProtoMajor: 1,
+				ProtoMinor: 0,
+				Close:      true,
 				StatusCode: 200,
 				Body:       io.NopCloser(bytes.NewBuffer(file)),
 				Header:     req.Header}
@@ -254,7 +257,10 @@ func sendResponse(code int, error bool, message string, client net.Conn) {
 		return
 	}
 
-	var res = http.Response{Close: true,
+	var res = http.Response{Proto: "HTTP/1.0",
+		ProtoMajor: 1,
+		ProtoMinor: 0,
+		Close:      true,
 		StatusCode: code,
 		Body:       io.NopCloser(bytes.NewReader(jsonifiedStr))}
 

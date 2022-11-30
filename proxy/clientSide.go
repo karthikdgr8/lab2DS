@@ -102,7 +102,10 @@ func sendResponse(code int, error bool, message string, client net.Conn) {
 		return
 	}
 
-	var res = http.Response{Close: true,
+	var res = http.Response{Proto: "HTTP/1.0",
+		ProtoMajor: 1,
+		ProtoMinor: 0,
+		Close:      true,
 		StatusCode: code,
 		Body:       io.NopCloser(bytes.NewReader(jsonifiedStr))}
 

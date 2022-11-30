@@ -6,7 +6,8 @@ import (
 	"time"
 )
 
-/**
+/*
+*
 The server side of the proxy. This function is called by the client-thread, and return the response given by the
 actual server.
 */
@@ -19,7 +20,13 @@ func callServer(r *http.Request) http.Response {
 
 	resp, err := c.Do(&newReq)
 	if err != nil {
-		return http.Response{StatusCode: http.StatusInternalServerError}
+		return http.Response{
+			Proto:      "HTTP/1.0",
+			ProtoMajor: 1,
+			ProtoMinor: 0,
+			Close:      true,
+			StatusCode: http.StatusInternalServerError,
+		}
 	}
 
 	return *resp
