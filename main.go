@@ -167,14 +167,16 @@ func postHandler(req *http.Request, client net.Conn) {
 	retVal := multipartUpload(req)
 
 	var respCode = 0
+	var msg = "File uploaded"
 
 	if retVal {
 		respCode = http.StatusCreated
 	} else {
 		respCode = http.StatusBadRequest
+		msg = "Wrong File format or incomplete upload"
 	}
 
-	sendResponse(respCode, !retVal, "File uploaded", client)
+	sendResponse(respCode, !retVal, msg, client)
 }
 
 func multipartUpload(req *http.Request) bool {
