@@ -23,18 +23,19 @@ var IP string
 var PORT string
 var DELIM = 0x1F
 
-func createInstance(ip string, port string) {
+func createNetworkInstance(ip string, port string) {
 	IP = ip
 	PORT = port
+	startNetworkInstance()
 }
 
-func start() {
+func startNetworkInstance() {
 	log.Println("STARTING TCP-SERVER")
 	server, err := net.Listen("tcp", IP+":"+PORT)
 	if err != nil {
 		log.Println("Error: " + err.Error())
 	}
-	serverRoutine(server)
+	go serverRoutine(server)
 
 }
 
@@ -77,13 +78,22 @@ func clientSend(conn net.Conn, data []byte) {
 	}
 }
 
-//Handle new client.
-func handleNewConnection(conn net.Conn) {
-
-	data := listenForData(conn)
-	message := map[string]MessageType{}
+func unmarshalMessage(data []byte) MessageType {
+	message := MessageType{}
 	err := json.Unmarshal(data, &message)
-	if (err != nil) {
+	if err != nil {
+		log.Println("ERROR UNMARSHALLING MESSAGE: ", err.Error())
+		return MessageType{}
+	}
+	return message
+}
+
+// Handle new client.
+func handleNewConnection(conn net.Conn) {
+	data := listenForData(conn)
+	message := MessageType{}
+	err := json.Unmarshal(data, &message)
+	if err != nil {
 		log.Println("ERROR UNMARSHALLING MESSAGE: ", err.Error())
 	}
 
