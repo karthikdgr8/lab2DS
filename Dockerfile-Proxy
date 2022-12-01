@@ -9,7 +9,7 @@ COPY ./go.mod ./
 RUN mkdir -p proxy
 
 COPY ./proxy/*.go ./proxy
-COPY ./sem ./sem
+COPY src/sem ./sem
 
 WORKDIR /app/proxy
 
