@@ -80,14 +80,24 @@ func sendToPeer(conn net.Conn, data []byte) {
 	}
 }
 
-func unmarshalMessage(data []byte) MessageType {
+func unmarshalMessage(data []byte) *MessageType {
 	message := MessageType{}
 	err := json.Unmarshal(data, &message)
 	if err != nil {
 		log.Println("ERROR UNMARSHALLING MESSAGE: ", err.Error())
-		return MessageType{}
+		return nil
 	}
-	return message
+	return &message
+}
+
+func unmarshalPeer(data string) *Peer {
+	ret := Peer{}
+	err := json.Unmarshal([]byte(data), &ret)
+	if err != nil {
+		log.Println("ERROR UNMARSHALLING PEER. Input: "+data, "Error: "+err.Error())
+		return nil
+	}
+	return &ret
 }
 
 // Handle new client.
