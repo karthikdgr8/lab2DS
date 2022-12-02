@@ -7,31 +7,33 @@ import (
 	"net"
 )
 
-type Client struct {
+type Peer struct {
 	Ip   string
 	Port string
 	ID   string
+	//Connection net.Conn `json:"-"`
+	//SendSem    sem.Weighted `json:"-"`
 }
 
 type MessageType struct {
 	Action string
-	Owner  Client
+	Owner  Peer
 	Vars   []string
 }
 
-var IP string
-var PORT string
+var OWN_IP string
+var OWN_PORT string
 var DELIM = 0x1F
 
 func createNetworkInstance(ip string, port string) {
-	IP = ip
-	PORT = port
+	OWN_IP = ip
+	OWN_PORT = port
 	startNetworkInstance()
 }
 
 func startNetworkInstance() {
 	log.Println("STARTING TCP-SERVER")
-	server, err := net.Listen("tcp", IP+":"+PORT)
+	server, err := net.Listen("tcp", OWN_IP+":"+OWN_PORT)
 	if err != nil {
 		log.Println("Error: " + err.Error())
 	}
@@ -71,7 +73,7 @@ func connectToPeer(ip string, port string) net.Conn {
 	return conn
 }
 
-func clientSend(conn net.Conn, data []byte) {
+func sendToPeer(conn net.Conn, data []byte) {
 	_, err := conn.Write(append(data, byte(DELIM)))
 	if err != nil {
 		log.Println("ERROR SENDING DATA: " + err.Error())
@@ -97,4 +99,32 @@ func handleNewConnection(conn net.Conn) {
 		log.Println("ERROR UNMARSHALLING MESSAGE: ", err.Error())
 	}
 
+}
+
+func search(message []byte, startPoint Peer) Peer {
+	destination := Peer{}
+	for {
+		conn := connectToPeer(startPoint.Ip, startPoint.Port)
+		_, err := conn.Write(message)
+		response := listenForData(conn)
+		parsedResponse := MessageType{}
+		conn.Close()
+		if err != nil {
+			log.Println("ERROR WRITING SEARCHTERM: ", err.Error())
+			return Peer{}
+		}
+		err = json.Unmarshal(response, &parsedResponse)
+		if err != nil {
+			log.Println("ERROR UNMARSHALLING SEARCH RESPONSE: ", err.Error())
+			return Peer{}
+		}
+		err = json.Unmarshal([]byte(parsedResponse.Vars[0]), &destination)
+		if err != nil {
+			log.Println("ERROR UNMARSHALING DESTINATION PEER: ", err.Error())
+			return Peer{}
+		}
+		if destination.ID == startPoint.ID {
+			return destination
+		}
+	}
 }

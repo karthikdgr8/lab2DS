@@ -1,10 +1,15 @@
 package main
 
-import "time"
+import (
+	"encoding/json"
+	"log"
+	"time"
+)
 
-var predecessors [3]Client
-var successors [3]Client
-var fingerTable [161]Client
+var predecessors [3]Peer
+var successors [3]Peer
+var fingerTable [161]Peer
+var OWN_ID string
 
 func main() {
 	//Parse args
@@ -23,5 +28,20 @@ func maintanenceLoop(mTime time.Duration) {
 }
 
 func join(ip string, port string) {
+
+	message, err := json.Marshal(
+		MessageType{
+			Action: "search",
+			Owner: Peer{
+				Ip:   OWN_IP,
+				Port: OWN_PORT,
+				ID:   OWN_ID,
+			},
+			Vars: []string{OWN_ID},
+		})
+	if err != nil {
+		log.Println("ERROR MARSHALLING JOIN MESSAGE: ", err.Error())
+	}
+	search(message, Peer{Ip: ip, Port: port})
 
 }
