@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-var predecessors []Peer
-var successors []Peer
-var fingerTable [161]Peer
+var predecessors PeerList
+var successors PeerList
+var fingerTable PeerList
 var OWN_ID string
 
 func main() {
@@ -29,6 +29,20 @@ func maintanenceLoop(mTime time.Duration) {
 
 	for {
 		time.Sleep(mTime)
+	}
+}
+
+func handleIncoming(message MessageType) {
+	switch message.Action {
+	case "notify":
+		break
+	case "search":
+		break
+	case "put":
+		break
+	case "fetch":
+		break
+
 	}
 }
 
@@ -53,7 +67,7 @@ func join(ip string, port string) {
 }
 
 /*
-	Function to notify any peer of our own existence. This generalized starts by sending a "notify"
+	Function to notify any peer of our own existence. This generalized function starts by sending a "notify"
 	message to the relevant peer. This other peer will then, based on its own logic update its relevant tables
 	and respond with its closest neighbors in the "var" field.
 	The structure of the response will be the following.
@@ -97,14 +111,13 @@ func notify(peer Peer) {
 
 	neighbors = append(neighbors, peer) // Append the notified peer itself.
 	sort.Sort(neighbors)
+	refreshNeighbours(&neighbors)
 }
 
+// input must be sorted.
 func refreshNeighbours(newList *PeerList) {
 	if newList != nil {
 		newList := *newList // Dereference into overshadowing variable.
-		if len(successors) > 0 {
-
-		}
 		//Find our index in the list.
 		i := 0
 		for i = 0; i < newList.Len(); i++ {
@@ -112,15 +125,31 @@ func refreshNeighbours(newList *PeerList) {
 				break
 			}
 		}
-		tmpPredecessors := newList[:i-1]
-		tempSuccessors := newList[2:]
+		tempPredecessors := newList[0 : i-1]
+		tempSuccessors := newList[i : len(newList)-1]
 
-		for i = 0; i < 3; i++ {
-			if i < tempSuccessors.Len() {
-				//TODO: implement.
+		for i := 0; i < 3; i++ {
+			if i < predecessors.Len() {
+				tempPredecessors = append(tempPredecessors, predecessors[i])
 			}
-			if i < tmpPredecessors.Len() {
+			if i < successors.Len() {
+				tempSuccessors = append(tempSuccessors, successors[i])
+			}
+		}
 
+		doNotify := !sort.IsSorted(tempPredecessors) || !sort.IsSorted(successors)
+		sort.Sort(tempSuccessors)
+		sort.Sort(tempPredecessors)
+
+		successors = tempSuccessors[:3]
+		predecessors = tempPredecessors[:3] //TODO: CHECK INDEXING.
+
+		if doNotify {
+			for i := 0; i < successors.Len(); i++ {
+				notify(successors[i])
+			}
+			for i := 0; i < predecessors.Len(); i++ {
+				notify(predecessors[i])
 			}
 		}
 	}
