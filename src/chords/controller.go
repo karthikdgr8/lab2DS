@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"math/big"
 	"sort"
 	"time"
 )
@@ -18,18 +19,64 @@ func main() {
 	print("Start")
 
 	createNetworkInstance("127.0.0.1", "12323")
-	maintanenceLoop(maintanenceTime)
+	maintenanceLoop(maintanenceTime)
 }
 
 func getOwnerStruct() Peer {
 	return Peer{Ip: OWN_IP, Port: OWN_PORT, ID: OWN_ID}
 }
 
-func maintanenceLoop(mTime time.Duration) {
+func maintenanceLoop(mTime time.Duration) {
 
 	for {
 		time.Sleep(mTime)
 	}
+}
+
+func searchResponse(message MessageType) {
+	var foundPeer Peer
+	if message.Vars[0] < OWN_ID {
+		foundPeer = getOwnerStruct()
+	} else if message.Vars[0] < successors[0].ID {
+		foundPeer = successors[0]
+	} else if message.Vars[0] < successors[1].ID {
+		foundPeer = successors[1]
+	} else if message.Vars[0] < successors[2].ID {
+		foundPeer = successors[2]
+	} else {
+		searchID := new(big.Int)
+		searchID.SetString(message.Vars[0], 16)
+		searchID.Abs(searchID)
+		ownId := new(big.Int)
+		ownId.SetString(OWN_ID, 16)
+		ownId.Abs(ownId)
+		fingerInt := ownId
+		index := 0
+		for searchID.Cmp(fingerInt) < 0 && index < 162 {
+			fingerInt.Add(fingerInt, new(big.Int).SetInt64(1<<index)) //int64( math.Pow(2, index))))
+			index++
+		}
+		foundPeer = fingerTable[index-1]
+	}
+
+	peerBytes, err := json.Marshal(foundPeer)
+	if err != nil {
+		log.Println("ERROR MARSHALLING SEARCH RESPONSE: ", err.Error())
+	}
+	var vars []string
+	vars[0] = string(peerBytes)
+
+	response, err := json.Marshal(MessageType{
+		Action: "searchResponse",
+		Owner:  getOwnerStruct(),
+		Vars:   vars,
+	})
+
+	if err != nil {
+		log.Println("ERROR MARSHALLING SEARCH RESPONSE MESSAGE: ", err.Error())
+		return
+	}
+	sendToPeer(connectToPeer(message.Owner.Ip, message.Owner.Port), response)
 }
 
 func handleIncoming(message MessageType) {
@@ -37,6 +84,7 @@ func handleIncoming(message MessageType) {
 	case "notify":
 		break
 	case "search":
+		searchResponse(message)
 		break
 	case "put":
 		break
