@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/holiman/uint256"
 	"log"
 	"math/big"
 	"sort"
@@ -33,6 +34,45 @@ func maintenanceLoop(mTime time.Duration) {
 	}
 }
 
+func fingerSearch (id string) Peer{
+	var foundPeer *Peer
+ 	searchID := new(big.Int)
+	searchID.SetString(id, 16)
+	searchID.Abs(searchID)
+	ownId := new(big.Int)
+	ownId.SetString(OWN_ID, 16)
+	ownId.Abs(ownId)
+	fingerInt := *ownId
+	index := 0
+	var shifter int64
+	mytest := uint256.NewInt(2)
+	adder := new(big.Int)
+	for searchID.Cmp(&fingerInt) < 0 && index < 162 {
+		fingerInt = *ownId
+		if index < 64{
+			shifter = 1
+			fingerInt.Add(&fingerInt, new(big.Int).SetInt64(shifter<<index)) //int64( math.Pow(2, index))))
+		} else{
+			if(index < 64 && index < )
+
+		}
+
+		shifter = 1 << (index % 64)
+		if index > 64 && index < 128 {
+			adder.MulRange()
+			adder.Mul(shifter, 1<<63)
+		} else if index > 128 {
+
+		} else {
+
+		}
+
+		index++
+	}
+	foundPeer = &fingerTable[index-1]
+	return *foundPeer
+}
+
 func searchResponse(message MessageType) {
 	var foundPeer Peer
 	if message.Vars[0] < OWN_ID {
@@ -44,19 +84,7 @@ func searchResponse(message MessageType) {
 	} else if message.Vars[0] < successors[2].ID {
 		foundPeer = successors[2]
 	} else {
-		searchID := new(big.Int)
-		searchID.SetString(message.Vars[0], 16)
-		searchID.Abs(searchID)
-		ownId := new(big.Int)
-		ownId.SetString(OWN_ID, 16)
-		ownId.Abs(ownId)
-		fingerInt := ownId
-		index := 0
-		for searchID.Cmp(fingerInt) < 0 && index < 162 {
-			fingerInt.Add(fingerInt, new(big.Int).SetInt64(1<<index)) //int64( math.Pow(2, index))))
-			index++
-		}
-		foundPeer = fingerTable[index-1]
+
 	}
 
 	peerBytes, err := json.Marshal(foundPeer)
