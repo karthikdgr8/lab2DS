@@ -108,6 +108,8 @@ func handleNewConnection(conn net.Conn) {
 	if err != nil {
 		log.Println("ERROR UNMARSHALLING MESSAGE: ", err.Error())
 	}
+	handleIncoming(message, conn)
+	conn.Close()
 
 }
 

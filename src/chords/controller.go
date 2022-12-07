@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"math/big"
+	"net"
+	"os"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -13,22 +16,137 @@ var successors PeerList
 var fingerTable PeerList
 var OWN_ID string
 
+func testSetup() {
+	OWN_ID = "12778624"
+}
+
+/*
+1. -a <String> = The IP address that the Chord client will bind to, as well as advertise to other nodes. Represented as
+					an ASCII string (e.g., 128.8.126.63). Must be specified.
+2. -p <Number> = The port that the Chord client will bind to and listen on. Represented as a base-10 integer. Must be specified.
+3. --ja <String> = The IP address of the machine running a Chord node. The Chord client will join this node’s ring.
+					Represented as an ASCII string (e.g., 128.8.126.63). Must be specified if --jp is specified.
+4. --jp <Number> = The port that an existing Chord node is bound to and listening on. The Chord client will join this node’s ring.
+					Represented as a base-10 integer. Must be specified if --ja is specified.
+5. --ts <Number> = The time in milliseconds between invocations of ‘stabilize’.
+					Represented as a base-10 integer. Must be specified, with a value in the range of [1,60000].
+6. --tff <Number> = The time in milliseconds between invocations of ‘fix fingers’. Represented as a base-10 integer.
+					Must be specified, with a value in the range of [1,60000].
+7. --tcp <Number> = The time in milliseconds between invocations of ‘check predecessor’.
+					Represented as a base-10 integer. Must be specified, with a value in the range of [1,60000].
+8. -r <Number> = The number of successors maintained by the Chord client. Represented as a base-10 integer.
+					Must be specified, with a value in the range of [1,32].
+9. -i <String> = The identifier (ID) assigned to the Chord client which will override the ID computed by the SHA1 sum of the client’s
+					IP address and port number. Represented as a string of 40 characters matching [0-9a-fA-F]. Optional parameter.
+*/
+
 func main() {
 	//Parse args
-	maintanenceTime := 5000 * time.Millisecond
-	print("Start")
 
-	createNetworkInstance("127.0.0.1", "12323")
-	maintenanceLoop(maintanenceTime)
+	i := 0
+	ip := "127.0.0.1" // defaults to localhost.
+	port := "12323"   //default port
+	maintenanceTime := 30000 * time.Millisecond
+	joinIp := ""
+	joinPort := ""
+
+	for i = 1; i < len(os.Args)-1; i++ {
+
+		switch os.Args[i] {
+		case "-a":
+			ip = os.Args[i+1]
+			println("Binding to IP: ", os.Args[i+1])
+			break
+		case "-p":
+			port = os.Args[i+1]
+			println("Binding Port: ", os.Args[i+1])
+			break
+		case "--ja": //Join ip
+			println("Joining IP: ", os.Args[i+1])
+			joinIp = os.Args[i+1]
+			break
+		case "--jp": //join port
+			println("Joining Port: ", os.Args[i+1])
+			joinPort = os.Args[i+1]
+			break
+		case "--ts":
+			maintInt, _ := strconv.Atoi(os.Args[i+1])
+			maintenanceTime = time.Duration(maintInt) * time.Millisecond
+			println("Stabilizing Time: ", os.Args[i+1])
+			break
+		case "--tff":
+			println(os.Args[i+1])
+			maintInt, _ := strconv.Atoi(os.Args[i+1])
+			maintenanceTime = time.Duration(maintInt) * time.Millisecond
+			break
+		case "--tcp":
+			println(os.Args[i+1])
+			maintInt, _ := strconv.Atoi(os.Args[i+1])
+			maintenanceTime = time.Duration(maintInt) * time.Millisecond
+			break
+		case "-i":
+			println(os.Args[i+1])
+			break
+		default:
+			continue
+		}
+	}
+
+	//testSetup()
+
+	print("Start\n")
+
+	createNetworkInstance(ip, port)
+	maintenanceLoop(maintenanceTime)
+	if joinIp != "" && joinPort != "" {
+
+	}
 }
 
 func getOwnerStruct() Peer {
 	return Peer{Ip: OWN_IP, Port: OWN_PORT, ID: OWN_ID}
 }
 
-func maintenanceLoop(mTime time.Duration) {
+func checkNeighbors() {
+	for i := 0; i < predecessors.Len(); i++ {
+		notify(predecessors[i])
+	}
+	for i := 0; i < len(successors); i++ {
+		notify(successors[i])
+	}
+}
 
+func maintainFingers() {
+
+	var slider int64 = 1
+	index := 0
+	for ; index < 64; index++ {
+
+		log.Println("OWN ID: ", OWN_ID)
+		curSearch, _ := new(big.Int).SetString(OWN_ID, 16)
+		curSearch.Add(curSearch, new(big.Int).SetInt64(slider<<index))
+		searchTerm := curSearch.Text(16)
+
+		startPoint := fingerSearch(searchTerm)
+		if startPoint != nil {
+			var tmpVars []string
+			tmpVars = append(tmpVars, searchTerm)
+			bytes, err := json.Marshal(MessageType{Owner: getOwnerStruct(), Action: "search", Vars: tmpVars})
+			if err != nil {
+				log.Println("ERROR MARSHALLING SEARCH IN FINGER MAINTENANCE: ", err.Error())
+			}
+			result := search(bytes, *startPoint)
+			if index > len(fingerTable) || (result.ID > fingerTable[index].ID && result.ID < searchTerm) {
+				fingerTable[index] = result
+			}
+		}
+	}
+}
+
+func maintenanceLoop(mTime time.Duration) {
 	for {
+		checkNeighbors()
+		maintainFingers()
 		time.Sleep(mTime)
 	}
 }
@@ -41,9 +159,10 @@ func fingerSearch(id string) *Peer {
 		tmp, noProbs := new(big.Int).SetString(fingerTable[i].ID, 16)
 		if noProbs && tmp.Cmp(searchTerm) > 0 {
 			foundPeer = &fingerTable[i]
+		} else if !noProbs {
+			log.Println("PROBS!")
 		}
 	}
-
 	return foundPeer
 }
 
@@ -67,7 +186,6 @@ func searchResponse(message MessageType) {
 	}
 	var vars []string
 	vars[0] = string(peerBytes)
-
 	response, err := json.Marshal(MessageType{
 		Action: "searchResponse",
 		Owner:  getOwnerStruct(),
@@ -81,7 +199,7 @@ func searchResponse(message MessageType) {
 	sendToPeer(connectToPeer(message.Owner.Ip, message.Owner.Port), response)
 }
 
-func handleIncoming(message MessageType) {
+func handleIncoming(message MessageType, conn net.Conn) {
 	switch message.Action {
 	case "notify":
 		break
