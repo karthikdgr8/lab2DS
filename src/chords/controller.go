@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"math"
 	"math/big"
 	"net"
 	"os"
@@ -15,10 +16,11 @@ var predecessors PeerList
 var successors PeerList
 var fingerTable PeerList
 var OWN_ID string
+var neighborsLen int = 3
 
-func testSetup() {
-	OWN_ID = "12778624"
-}
+//func testSetup() {
+//	OWN_ID = "12778624"
+//}
 
 /*
 1. -a <String> = The IP address that the Chord client will bind to, as well as advertise to other nodes. Represented as
@@ -43,14 +45,13 @@ func testSetup() {
 func main() {
 	//Parse args
 
-	i := 0
 	ip := "127.0.0.1" // defaults to localhost.
 	port := "12323"   //default port
 	maintenanceTime := 30000 * time.Millisecond
 	joinIp := ""
 	joinPort := ""
 
-	for i = 1; i < len(os.Args)-1; i++ {
+	for i := 1; i < len(os.Args)-1; i++ {
 
 		switch os.Args[i] {
 		case "-a":
@@ -85,7 +86,8 @@ func main() {
 			maintenanceTime = time.Duration(maintInt) * time.Millisecond
 			break
 		case "-i":
-			println(os.Args[i+1])
+			println("Overridden ID: ", os.Args[i+1])
+			OWN_ID = os.Args[i+1]
 			break
 		default:
 			continue
@@ -94,13 +96,22 @@ func main() {
 
 	//testSetup()
 
+	if OWN_ID == "" {
+		log.Println("Setting random ID.")
+		OWN_ID = "172b17"
+
+	}
+
 	print("Start\n")
 
 	createNetworkInstance(ip, port)
-	maintenanceLoop(maintenanceTime)
 	if joinIp != "" && joinPort != "" {
+		log.Println("Attempting to join: " + ip + ":" + port)
+		join(joinIp, joinPort)
 
 	}
+
+	maintenanceLoop(maintenanceTime)
 }
 
 func getOwnerStruct() Peer {
@@ -118,11 +129,11 @@ func checkNeighbors() {
 
 func maintainFingers() {
 
+	log.Println("Checking finger-table. Own ID: ", OWN_ID)
 	var slider int64 = 1
 	index := 0
 	for ; index < 64; index++ {
 
-		log.Println("OWN ID: ", OWN_ID)
 		curSearch, _ := new(big.Int).SetString(OWN_ID, 16)
 		curSearch.Add(curSearch, new(big.Int).SetInt64(slider<<index))
 		searchTerm := curSearch.Text(16)
@@ -145,6 +156,7 @@ func maintainFingers() {
 
 func maintenanceLoop(mTime time.Duration) {
 	for {
+
 		checkNeighbors()
 		maintainFingers()
 		time.Sleep(mTime)
@@ -166,18 +178,28 @@ func fingerSearch(id string) *Peer {
 	return foundPeer
 }
 
-func searchResponse(message MessageType) {
+func searchResponse(message MessageType, conn net.Conn) {
+	log.Println("Building search response.")
+	log.Println("Vars: ", message.Vars, "LEN: ", len(message.Vars))
+	//message.Vars = []string(message.Vars)
 	var foundPeer Peer
-	if message.Vars[0] < OWN_ID {
+
+	if message.Vars[0] <= OWN_ID {
+		log.Println("Peer found itself as successor. Sending self as search response")
 		foundPeer = getOwnerStruct()
-	} else if message.Vars[0] < successors[0].ID {
+	} else if len(successors) > 1 && message.Vars[0] < successors[0].ID {
 		foundPeer = successors[0]
-	} else if message.Vars[0] < successors[1].ID {
+	} else if len(successors) > 2 && message.Vars[0] < successors[1].ID {
 		foundPeer = successors[1]
-	} else if message.Vars[0] < successors[2].ID {
+	} else if len(successors) > 1 && message.Vars[0] < successors[2].ID {
 		foundPeer = successors[2]
 	} else {
-		foundPeer = *fingerSearch(message.Vars[0])
+		tmpPeer := fingerSearch(message.Vars[0])
+		if tmpPeer != nil {
+			foundPeer = *tmpPeer
+		} else {
+			foundPeer = getOwnerStruct()
+		}
 	}
 
 	peerBytes, err := json.Marshal(foundPeer)
@@ -185,7 +207,7 @@ func searchResponse(message MessageType) {
 		log.Println("ERROR MARSHALLING SEARCH RESPONSE: ", err.Error())
 	}
 	var vars []string
-	vars[0] = string(peerBytes)
+	vars = append(vars, string(peerBytes))
 	response, err := json.Marshal(MessageType{
 		Action: "searchResponse",
 		Owner:  getOwnerStruct(),
@@ -196,15 +218,38 @@ func searchResponse(message MessageType) {
 		log.Println("ERROR MARSHALLING SEARCH RESPONSE MESSAGE: ", err.Error())
 		return
 	}
-	sendToPeer(connectToPeer(message.Owner.Ip, message.Owner.Port), response)
+
+	sendToPeer(conn, response)
+}
+
+func respondToNotify(message MessageType, conn net.Conn) {
+
+	newList := new(PeerList)
+
+	newList.Append(message.Owner)
+	refreshNeighbours(newList)
+
+	var resList []string
+
+	for i := 0; i < predecessors.Len(); i++ {
+		preBytes, _ := json.Marshal(predecessors[i])
+		resList = append(resList, string(preBytes))
+	}
+
+	response := MessageType{Action: "notifyResponse", Owner: getOwnerStruct(), Vars: resList}
+
+	jsonres, _ := json.Marshal(response)
+	sendToPeer(conn, jsonres)
+
 }
 
 func handleIncoming(message MessageType, conn net.Conn) {
 	switch message.Action {
 	case "notify":
+		respondToNotify(message, conn)
 		break
 	case "search":
-		searchResponse(message)
+		searchResponse(message, conn)
 		break
 	case "put":
 		break
@@ -231,6 +276,8 @@ func join(ip string, port string) {
 	}
 	succ := search(message, Peer{Ip: ip, Port: port})
 	notify(succ)
+
+	println("FINISHED JOIN")
 
 }
 
@@ -263,6 +310,7 @@ func notify(peer Peer) {
 		log.Println("ERROR MARSHALLING NOTIFY MESSAGE: ", err.Error())
 	}
 	sendToPeer(sucConn, message)
+	//sucConn.Close()
 	response := MessageType{}
 	err = json.Unmarshal(listenForData(sucConn), &response)
 	rawNeighbors := response.Vars
@@ -279,10 +327,10 @@ func notify(peer Peer) {
 
 	neighbors = append(neighbors, peer) // Append the notified peer itself.
 	sort.Sort(neighbors)
+	sucConn.Close()
 	refreshNeighbours(&neighbors)
 }
 
-// input must be sorted.
 func refreshNeighbours(newList *PeerList) {
 	if newList != nil {
 		newList := *newList // Dereference into overshadowing variable.
@@ -293,8 +341,9 @@ func refreshNeighbours(newList *PeerList) {
 				break
 			}
 		}
-		tempPredecessors := newList[0 : i-1]
-		tempSuccessors := newList[i : len(newList)-1]
+		println("NEWLIST len : ", len(newList))
+		tempPredecessors := newList[0:i]
+		tempSuccessors := newList[i:len(newList)]
 
 		for i := 0; i < 3; i++ {
 			if i < predecessors.Len() {
@@ -309,8 +358,8 @@ func refreshNeighbours(newList *PeerList) {
 		sort.Sort(tempSuccessors)
 		sort.Sort(tempPredecessors)
 
-		successors = tempSuccessors[:3]
-		predecessors = tempPredecessors[:3] //TODO: CHECK INDEXING.
+		successors = tempSuccessors[:int(math.Min(float64(tempSuccessors.Len()), float64(neighborsLen)))]
+		predecessors = tempPredecessors[:int(math.Min(float64(tempPredecessors.Len()), float64(neighborsLen)))] //TODO: CHECK INDEXING.
 
 		if doNotify {
 			for i := 0; i < successors.Len(); i++ {
@@ -335,4 +384,8 @@ func (a PeerList) Less(i, j int) bool {
 }
 func (a PeerList) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
+}
+
+func (a PeerList) Append(b Peer) {
+	a = append(a, b)
 }

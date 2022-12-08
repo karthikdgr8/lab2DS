@@ -44,6 +44,7 @@ func startNetworkInstance() {
 func serverRoutine(listener net.Listener) {
 	for {
 		client, err := listener.Accept()
+		log.Println("New client accepted")
 		if err != nil {
 			log.Println("ERROR ACCEPTING CLIENT: " + err.Error())
 		} else {
@@ -53,18 +54,23 @@ func serverRoutine(listener net.Listener) {
 }
 
 func listenForData(conn net.Conn) []byte {
-	log.Println("New client accepted")
+	log.Println("Reading from client.")
 	connBuf := bufio.NewReader(conn)
 	data, err := connBuf.ReadBytes(byte(DELIM))
-	data = data[:len(data)-1]
+	if len(data) > 1 {
+		data = data[:len(data)-1]
+	}
+
 	if err != nil {
 		log.Println("ERROR READING DATA: " + err.Error())
 		return nil
 	}
+	println("Read: ", string(data))
 	return data
 }
 
 func connectToPeer(ip string, port string) net.Conn {
+	log.Println("Dialing out.")
 	conn, err := net.Dial("tcp", ip+":"+port)
 	if err != nil {
 		log.Println("ERROR ESTABLISHING CLINET TCP: " + err.Error())
@@ -74,6 +80,7 @@ func connectToPeer(ip string, port string) net.Conn {
 }
 
 func sendToPeer(conn net.Conn, data []byte) {
+	println("Sending : ", string(data))
 	_, err := conn.Write(append(data, byte(DELIM)))
 	if err != nil {
 		log.Println("ERROR SENDING DATA: " + err.Error())
@@ -114,18 +121,18 @@ func handleNewConnection(conn net.Conn) {
 }
 
 func search(message []byte, startPoint Peer) Peer {
+	log.Println("Searching..")
 	destination := Peer{}
 	for {
 		conn := connectToPeer(startPoint.Ip, startPoint.Port)
-		_, err := conn.Write(message)
+		log.Println("Connected to search entrypoint. Sending search: ", string(message))
+		sendToPeer(conn, message)
+		//_, err := conn.Write(message)
 		response := listenForData(conn)
 		parsedResponse := MessageType{}
 		conn.Close()
-		if err != nil {
-			log.Println("ERROR WRITING SEARCHTERM: ", err.Error())
-			return Peer{}
-		}
-		err = json.Unmarshal(response, &parsedResponse)
+
+		err := json.Unmarshal(response, &parsedResponse)
 		if err != nil {
 			log.Println("ERROR UNMARSHALLING SEARCH RESPONSE: ", err.Error())
 			return Peer{}
@@ -137,6 +144,8 @@ func search(message []byte, startPoint Peer) Peer {
 		}
 		if destination.ID == startPoint.ID {
 			return destination
+		} else {
+			startPoint = destination // Next entry for search
 		}
 	}
 }
