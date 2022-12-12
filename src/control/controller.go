@@ -1,22 +1,18 @@
 package main
 
 import (
-	"encoding/json"
+	"lab1DS/src/peerNet"
+	"lab1DS/src/protocol"
+	"lab1DS/src/ring"
 	"log"
-	"math"
-	"math/big"
-	"net"
 	"os"
-	"sort"
 	"strconv"
 	"time"
 )
 
-var predecessors PeerList
-var successors PeerList
-var fingerTable PeerList
 var OWN_ID string
 var neighborsLen int = 3
+var RING *ring.Ring
 
 //func testSetup() {
 //	OWN_ID = "12778624"
@@ -103,8 +99,9 @@ func main() {
 	}
 
 	print("Start\n")
+	peerNet.CreateNetworkInstance(ip, port)
 
-	createNetworkInstance(ip, port)
+	RING = ring.NewRing(OWN_ID, ip, port, 32, neighborsLen)
 	if joinIp != "" && joinPort != "" {
 		log.Println("Attempting to join: " + ip + ":" + port)
 		join(joinIp, joinPort)
@@ -114,8 +111,49 @@ func main() {
 	maintenanceLoop(maintenanceTime)
 }
 
-func getOwnerStruct() Peer {
-	return Peer{Ip: OWN_IP, Port: OWN_PORT, ID: OWN_ID}
+func join(ip, port string) {
+	entry := ring.NewPeer("", ip, port)
+	log.Println("Searching for closest node on ring.")
+	closest := peerNet.Search(*protocol.NewMessage().MakeSearch(RING.GetOwner().ID, RING.GetOwner()).Marshal(), *entry)
+	log.Println("Found: " + closest.ID + ". Attempting notify.")
+	neighList := closest.Notify(RING.GetOwner())
+	log.Println("Node responded with: ", neighList.Len(), " nodes. Attempting add")
+	neighList.Append(closest)
+
+	for i := 0; i < neighList.Len(); i++ {
+		RING.AddNeighbour(*neighList.Get(i))
+	}
+}
+
+func maintenanceLoop(mTime time.Duration) {
+	for {
+		RING.FixFingers()
+		time.Sleep(mTime)
+	}
+
+}
+
+func handleIncoming(message *protocol.MessageType) {
+
+	switch message.Action {
+	case "notify":
+
+		break
+	case "search":
+			
+		break
+	case "put":
+		break
+	case "fetch":
+		break
+
+	}
+}
+
+/*
+
+func getOwnerStruct() ring.Peer {
+	return ring.Peer{Ip: OWN_IP, Port: OWN_PORT, ID: OWN_ID}
 }
 
 func checkNeighbors() {
@@ -154,17 +192,9 @@ func maintainFingers() {
 	}
 }
 
-func maintenanceLoop(mTime time.Duration) {
-	for {
 
-		checkNeighbors()
-		maintainFingers()
-		time.Sleep(mTime)
-	}
-}
-
-func fingerSearch(id string) *Peer {
-	var foundPeer *Peer = nil
+func fingerSearch(id string) *ring.Peer {
+	var foundPeer *ring.Peer = nil
 	searchTerm, _ := new(big.Int).SetString(id, 16)
 	i := 0
 	for ; i < fingerTable.Len(); i++ {
@@ -182,7 +212,7 @@ func searchResponse(message MessageType, conn net.Conn) {
 	log.Println("Building search response.")
 	log.Println("Vars: ", message.Vars, "LEN: ", len(message.Vars))
 	//message.Vars = []string(message.Vars)
-	var foundPeer Peer
+	var foundPeer ring.Peer
 
 	if message.Vars[0] <= OWN_ID {
 		log.Println("Peer found itself as successor. Sending self as search response")
@@ -264,7 +294,7 @@ func join(ip string, port string) {
 	message, err := json.Marshal(
 		MessageType{
 			Action: "search",
-			Owner: Peer{
+			Owner: ring.Peer{
 				Ip:   OWN_IP,
 				Port: OWN_PORT,
 				ID:   OWN_ID,
@@ -274,14 +304,14 @@ func join(ip string, port string) {
 	if err != nil {
 		log.Println("ERROR MARSHALLING JOIN MESSAGE: ", err.Error())
 	}
-	succ := search(message, Peer{Ip: ip, Port: port})
+	succ := search(message, ring.Peer{Ip: ip, Port: port})
 	notify(succ)
 
 	println("FINISHED JOIN")
 
 }
 
-/*
+
 	Function to notify any peer of our own existence. This generalized function starts by sending a "notify"
 	message to the relevant peer. This other peer will then, based on its own logic update its relevant tables
 	and respond with its closest neighbors in the "var" field.
@@ -297,9 +327,9 @@ func join(ip string, port string) {
 	]
 
 	The order here is however arbitrary, as the list will be sorted before use.
-*/
 
-func notify(peer Peer) {
+
+func notify(peer ring.Peer) {
 	sucConn := connectToPeer(peer.Ip, peer.Port)
 	message, err := json.Marshal(
 		MessageType{
@@ -316,7 +346,7 @@ func notify(peer Peer) {
 	rawNeighbors := response.Vars
 	var neighbors PeerList
 	for i := 0; i < len(rawNeighbors); i++ {
-		tmpPeer := Peer{}
+		tmpPeer := ring.Peer{}
 		err = json.Unmarshal([]byte(rawNeighbors[i]), &tmpPeer)
 		if err != nil {
 			log.Println("ERROR UNMARSHALLING NEIGHBOR LIST: ", err.Error())
@@ -372,10 +402,10 @@ func refreshNeighbours(newList *PeerList) {
 	}
 }
 
-/*Typedef needed to aid in sorting.*/
-type PeerList []Peer
 
-/*Sort.Interface methods to aid with sorting.*/
+type PeerList []ring.Peer
+
+
 func (a PeerList) Len() int {
 	return len(a)
 }
@@ -386,6 +416,7 @@ func (a PeerList) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
-func (a PeerList) Append(b Peer) {
+func (a PeerList) Append(b ring.Peer) {
 	a = append(a, b)
 }
+*/
