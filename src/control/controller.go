@@ -33,9 +33,12 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 	//testRing(RING)
 }
 
-func testRing(myRing *ring.Ring) {
-	//var strarr = []string = {"aab", "aac", "ddd", "fff", "ff1", "abc", "abd",}
+func testPut() {
+	putMessage := new(ring.Message).MakePut("myfile", RING.GetOwner())
+	println(putMessage.Marshal())
+}
 
+func testRing(myRing *ring.Ring) {
 	mypeer := ring.NewPeer("ddd", "1231", "12212")
 	for i := 0; i < 6; i++ {
 		myRing.AddNeighbour(*ring.NewPeer("a"+new(big.Int).SetInt64(int64(i)).Text(16), "12", "12322"))

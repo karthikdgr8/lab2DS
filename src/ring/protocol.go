@@ -15,6 +15,13 @@ func NewMessage() *Message {
 	return new(Message)
 }
 
+func (a *Message) MakePut(fileName string, owner Peer) *Message {
+	a.Action = "put"
+	a.Owner = owner
+	a.Vars = append(a.Vars, fileName)
+	return a
+}
+
 func (a *Message) MakeSearch(searchTerm string, owner Peer) *Message {
 	a.Action = "search"
 	a.Owner = owner
