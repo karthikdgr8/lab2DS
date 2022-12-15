@@ -7,10 +7,8 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
-	"lab1DS/src/peerNet"
 	"log"
 	"math/big"
-	"net"
 	"os"
 )
 
@@ -35,9 +33,9 @@ func getKeyFromFile() {
 	}
 }
 
-func fileEncryptAndStore(fileName string, conn net.Conn) {
+func fileEncryptAndSend(filePath string) []byte {
 
-	file := peerNet.ListenForData(conn)
+	file, err := os.ReadFile(filePath)
 
 	block, err := aes.NewCipher(Key)
 	if err != nil {
@@ -57,11 +55,8 @@ func fileEncryptAndStore(fileName string, conn net.Conn) {
 	}
 
 	ciphertext := gcm.Seal(nonce, nonce, file, nil)
-	// Save back to file
-	err = os.WriteFile(fileName, ciphertext, 0777)
-	if err != nil {
-		log.Panic(err)
-	}
+
+	return ciphertext
 }
 
 func fileDecryptAndSend(fileName string) []byte {

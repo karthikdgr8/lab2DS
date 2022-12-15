@@ -8,6 +8,8 @@ import (
 	"log"
 	"math/big"
 	"net"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -18,7 +20,7 @@ var NEIGH_LEN int
 func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ownID, joinIp, joinPort string) {
 	OWN_ID = ownID
 	netCallback := becauseGO.Callback{Callback: HandleIncoming}
-	//getKeyFromFile()
+	getKeyFromFile()
 	peerNet.CreateNetworkInstance(ip, port, netCallback)
 
 	NEIGH_LEN = neigborsLen
@@ -28,14 +30,32 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 		Join(joinIp, joinPort)
 
 	}
-	maintenanceLoop(maintenanceTime)
-	log.Println("TESTING RING:")
+	log.Println("TESTING Put:")
 	//testRing(RING)
+	//testPut("/Users/karthik/Downloads/key.txt")
+	//testGet("key.txt")
+	maintenanceLoop(maintenanceTime)
 }
 
-func testPut() {
-	putMessage := new(ring.Message).MakePut("myfile", RING.GetOwner())
-	println(putMessage.Marshal())
+func testPut(filePathToUpload string) {
+	fileName := strings.Split(filePath, "/")
+	hashedFileName := SHAify(fileName[len(fileName)-1])
+	putMessage := new(ring.Message).MakePut(hashedFileName, fileEncryptAndSend(filePathToUpload), RING.GetOwner())
+	owner := RING.GetOwner()
+	peer := RING.Search(hashedFileName).Search(hashedFileName, &owner)
+	peer.Connect()
+	peer.Send(putMessage.Marshal())
+	peer.Close()
+}
+
+func testGet(fileName string) {
+	hashedFileName := SHAify(fileName)
+	getMessage := new(ring.Message).MakeGet(hashedFileName, RING.GetOwner())
+	owner := RING.GetOwner()
+	peer := RING.Search(hashedFileName).Search(hashedFileName, &owner)
+	peer.Connect()
+	peer.Send(getMessage.Marshal())
+	peer.Close()
 }
 
 func testRing(myRing *ring.Ring) {
@@ -112,7 +132,15 @@ func processSearch(message *ring.Message, peer *ring.Peer) {
 }
 
 func processPut(message *ring.Message, peer *ring.Peer) {
+	log.Println("Node ", peer.ID, "is writing file ", message.Vars[0])
+	err := os.WriteFile(message.Vars[0], []byte(message.Vars[1]), 0777)
+	if err != nil {
+		return
+	}
+}
 
+func processGet(message *ring.Message, peer *ring.Peer) {
+	log.Println("Node", peer.ID, "IP:", peer.Ip, "Port:", peer.Port, " contains requested file")
 }
 
 func HandleIncoming(data []byte, conn net.Conn) {
@@ -134,7 +162,8 @@ func HandleIncoming(data []byte, conn net.Conn) {
 	case "put":
 		processPut(&message, peer)
 		break
-	case "fetch":
+	case "get":
+		processGet(&message, peer)
 		break
 	case "response":
 		break

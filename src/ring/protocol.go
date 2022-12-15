@@ -15,8 +15,16 @@ func NewMessage() *Message {
 	return new(Message)
 }
 
-func (a *Message) MakePut(fileName string, owner Peer) *Message {
+func (a *Message) MakePut(fileName string, file []byte, owner Peer) *Message {
 	a.Action = "put"
+	a.Owner = owner
+	a.Vars = append(a.Vars, fileName)
+	a.Vars = append(a.Vars, string(file))
+	return a
+}
+
+func (a *Message) MakeGet(fileName string, owner Peer) *Message {
+	a.Action = "get"
 	a.Owner = owner
 	a.Vars = append(a.Vars, fileName)
 	return a
