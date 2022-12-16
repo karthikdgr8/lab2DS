@@ -3,6 +3,7 @@ package ring
 import (
 	"context"
 	"encoding/json"
+	"lab1DS/src/control"
 	"lab1DS/src/peerNet"
 	"lab1DS/src/sem"
 	"log"
@@ -52,7 +53,19 @@ func (a *Peer) ToJsonString() string {
 
 func (a *Peer) Connect() *Peer {
 	a.SendSem.Acquire(context.Background(), 1)
+	priv := control.GeneratePrivate()
+	pub := priv.PublicKey
 	a.Connection = peerNet.ConnectToPeer(a.Ip, a.Port)
+	if a.Connection == nil {
+		log.Println("ERROR CONNECTING TO CLIENT")
+	}
+	log.Println("CONNECTION ESTABLISHED: Handshaking..")
+	peerNet.SendToPeer(a.Connection, pub.X.Bytes())
+	peerNet.SendToPeer(a.Connection, pub.Y.Bytes())
+	X := new(big.Int).SetBytes(peerNet.ListenForData(a.Connection))
+	Y := new(big.Int).SetBytes(peerNet.ListenForData(a.Connection))
+	a.SessionKey = control.CalculateSessionKey(*priv, X, Y)
+	log.Println("Handshake complete")
 	a.SendSem.Release(1)
 	return a
 }
@@ -78,7 +91,8 @@ func (a *Peer) Notify(owner Peer) *PeerList {
 
 func (a *Peer) Send(data []byte) *Peer {
 	a.SendSem.Acquire(context.Background(), 1)
-	peerNet.SendToPeer(a.Connection, data)
+	ciphertext := control.Encrypt(a.SessionKey, data)
+	peerNet.SendToPeer(a.Connection, ciphertext)
 	a.SendSem.Release(1)
 	return a
 }
@@ -86,12 +100,13 @@ func (a *Peer) Send(data []byte) *Peer {
 func (a *Peer) ReadMessage() Message {
 	a.SendSem.Acquire(context.Background(), 1)
 	data := peerNet.ListenForData(a.Connection)
+	data = control.Decrypt(a.SessionKey, data)
 	a.SendSem.Release(1)
 	message := Message{}
 	err := json.Unmarshal(data, &message)
 
 	if err != nil {
-		log.Println("ERROR READING FROM PEER: "+string(a.ID), "ERROR : ", err.Error())
+		log.Println("ERROR READING FROM PEER: "+string(a.ID), " ERROR : ", err.Error())
 	}
 	return message
 }
@@ -154,6 +169,20 @@ func (a *Peer) Int64() *int64 {
 	log.Println("Warning: attempting to parse int64 from null ID")
 	return nil
 }
+
+func FromNetwork(conn net.Conn) *Peer {
+	peer := new(Peer)
+	X := new(big.Int).SetBytes(peerNet.ListenForData(conn))
+	Y := new(big.Int).SetBytes(peerNet.ListenForData(conn))
+	priv := control.GeneratePrivate()
+	peer.SessionKey = control.CalculateSessionKey(*priv, X, Y)
+	pub := priv.PublicKey
+	peer.Send(pub.X.Bytes())
+	peer.Send(pub.Y.Bytes())
+	peer.Connection = conn
+	return peer
+}
+
 func NewPeer(id, ip, port string) *Peer {
 	a := new(Peer)
 	a.ID = id
@@ -167,6 +196,7 @@ type Peer struct {
 	Ip         string
 	Port       string
 	ID         string
+	SessionKey []byte       `json:"-"`
 	Connection net.Conn     `json:"-"`
 	SendSem    sem.Weighted `json:"-"`
 }

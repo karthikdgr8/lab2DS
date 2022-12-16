@@ -39,6 +39,34 @@ func (a *Ring) GetNeighbors() PeerList {
 	return ret
 }
 
+func (a *Ring) GetPredecessor() *Peer {
+	index := 0
+	for i := 0; i < a.neighbors.Len(); i++ {
+		if *a.neighbors[i].Int64() < *a.owner.Int64() {
+			index++
+		} else {
+			break
+		}
+	}
+	return &a.neighbors[index-1%a.neighbors.Len()]
+}
+
+func (a *Ring) GetSuccessor() *Peer {
+	index := 0
+	for i := 0; i < a.neighbors.Len(); i++ {
+		if *a.neighbors[i].Int64() < *a.owner.Int64() {
+			index++
+		} else {
+			break
+		}
+	}
+	if index == a.neighbors.Len()-1 {
+		return &a.neighbors[0]
+	} else {
+		return &a.neighbors[index]
+	}
+}
+
 func (a *Ring) AddNeighbour(peer Peer) {
 	if peer.ID == a.owner.ID {
 		return
@@ -46,14 +74,14 @@ func (a *Ring) AddNeighbour(peer Peer) {
 	log.Println("Adding neighbour: " + peer.ID)
 	a.modifySem.Acquire(context.Background(), 1)
 	//neigh := a.neighbors
-	ownId := a.owner.ID
+	ownId := a.owner.Int64()
 
 	a.neighbors = append(a.neighbors, peer)
 	sort.Sort(a.neighbors)
 	index := 0
 
 	for i := 0; i < a.neighbors.Len(); i++ {
-		if a.neighbors[i].ID < ownId {
+		if *a.neighbors[i].Int64() < *ownId {
 			index++
 		} else {
 			break
@@ -79,7 +107,7 @@ func (a *Ring) RemoveNeighbor(index int) {
 func (a *Ring) Search(term string) *Peer {
 	tmp, _ := new(big.Int).SetString(term, 16)
 	internalTerm := tmp.Int64()
-	println("internal searchfor ", internalTerm)
+	println("internal search for ", internalTerm)
 	if a.neighbors.Len() == 0 { // Know no peers, cant help further than self.
 		return &a.owner
 	}
@@ -101,10 +129,10 @@ func (a *Ring) Search(term string) *Peer {
 				return &neigh[i]
 			}
 		}
-		//If we end up here we have found no larger ids, hence the smallest known is the successor.
-		if a.owner.ID < neigh[0].ID {
+		if *a.owner.Int64() < *neigh[0].Int64() {
 			return &a.owner
 		}
+		//If we end up here we have found no larger ids, hence the smallest known is the successor.
 		return &neigh[0]
 	} else { //If we don't have complete knowledge. We check if we, or our immediate successor is the successor of the
 		// searchTerm. If not. we return the result of a fingerSearch.

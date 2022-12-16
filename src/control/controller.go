@@ -1,7 +1,6 @@
 package control
 
 import (
-	"encoding/json"
 	"lab1DS/src/becauseGO"
 	"lab1DS/src/peerNet"
 	"lab1DS/src/ring"
@@ -109,7 +108,7 @@ func Join(ip, port string) {
 
 func processNotify(message *ring.Message, peer *ring.Peer) {
 	neighList := RING.GetNeighbors()
-	RING.AddNeighbour(message.Owner)
+	RING.AddNeighbour(*peer)
 	res := new(ring.Message).MakeResponse(RING.GetOwner())
 	for i := 0; i < neighList.Len(); i++ {
 		res.Vars = append(res.Vars, neighList.Get(i).ToJsonString())
@@ -143,15 +142,13 @@ func processGet(message *ring.Message, peer *ring.Peer) {
 	log.Println("Node", peer.ID, "IP:", peer.Ip, "Port:", peer.Port, " contains requested file")
 }
 
-func HandleIncoming(data []byte, conn net.Conn) {
-	message := ring.Message{}
-	err := json.Unmarshal(data, &message)
-	if err != nil {
-		log.Println("ERROR UNMARSHALLING NEW CONNECTION")
-	}
-	message.Owner.SetConn(conn)
-	peer := &message.Owner
+func HandleIncoming(conn net.Conn) {
 
+	peer := ring.FromNetwork(conn)
+	message := peer.ReadMessage()
+	peer.ID = message.Owner.ID
+	peer.Ip = message.Owner.Ip
+	peer.Port = message.Owner.Port
 	switch message.Action {
 	case "notify": //Should update neighbor list, and return a list of all known neighbors
 		processNotify(&message, peer)

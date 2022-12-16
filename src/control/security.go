@@ -3,8 +3,11 @@ package control
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
@@ -33,6 +36,36 @@ func getKeyFromFile() {
 	}
 }
 
+func GeneratePrivate() *ecdsa.PrivateKey {
+	ret, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return ret
+}
+
+func CalculateSessionKey(priv ecdsa.PrivateKey, X, Y *big.Int) []byte {
+
+	//priva, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	//privb, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+
+	//puba := priva.PublicKey
+	//pubb := privb.PublicKey
+
+	//fmt.Printf("\nPrivate key (Alice) %x", priva.D)
+	//fmt.Printf("\nPrivate key (Bob) %x\n", privb.D)
+
+	//fmt.Printf("\nPublic key (Alice) (%x,%x)", puba.X, puba.Y)
+	//fmt.Printf("\nPublic key (Bob) (%x %x)\n", pubb.X, pubb.Y)
+	pub := priv.PublicKey
+	a, _ := pub.Curve.ScalarMult(X, Y, priv.D.Bytes())
+	//b, _ := pubb.Curve.ScalarMult(pubb.X, pubb.Y, priva.D.Bytes())
+
+	shared1 := sha256.Sum256(a.Bytes())
+	//shared2 := sha256.Sum256(b.Bytes())
+
+	fmt.Printf("\nShared key (Alice) %x\n", shared1)
+	return shared1[:]
+
+}
+
 func fileEncryptAndSend(filePath string) []byte {
 
 	file, err := os.ReadFile(filePath)
@@ -57,6 +90,14 @@ func fileEncryptAndSend(filePath string) []byte {
 	ciphertext := gcm.Seal(nonce, nonce, file, nil)
 
 	return ciphertext
+}
+
+func Encrypt(key, data []byte) []byte {
+	return nil
+}
+
+func Decrypt(key, data []byte) []byte {
+	return nil
 }
 
 func fileDecryptAndSend(fileName string) []byte {
