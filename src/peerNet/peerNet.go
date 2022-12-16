@@ -77,8 +77,9 @@ func SendToPeer(conn net.Conn, data []byte) {
 
 // Handle new client.
 func handleNewConnection(conn net.Conn) {
-	data := ListenForData(conn)
+
+	//data := ListenForData(conn)
 	//HandleIncoming(data, conn)
-	controller.Callback(data, conn)
-	conn.Close()
+	controller.Callback(conn)
+	//conn.Close()
 }
