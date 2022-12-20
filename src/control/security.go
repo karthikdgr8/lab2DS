@@ -70,7 +70,15 @@ func fileEncryptAndSend(filePath string) []byte {
 
 	file, err := os.ReadFile(filePath)
 
-	block, err := aes.NewCipher(Key)
+	if err != nil {
+		return nil
+	}
+
+	return Encrypt(Key, file) // Change Key from reading file to Diffie Hellman
+}
+
+func Encrypt(key, data []byte) []byte {
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -87,27 +95,14 @@ func fileEncryptAndSend(filePath string) []byte {
 		log.Fatal(err)
 	}
 
-	ciphertext := gcm.Seal(nonce, nonce, file, nil)
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 
 	return ciphertext
 }
 
-func Encrypt(key, data []byte) []byte {
-	return nil
-}
-
 func Decrypt(key, data []byte) []byte {
-	return nil
-}
 
-func fileDecryptAndSend(fileName string) []byte {
-
-	ciphertext, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	block, err := aes.NewCipher(Key)
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -117,14 +112,24 @@ func fileDecryptAndSend(fileName string) []byte {
 		log.Panic(err)
 	}
 
-	nonce := ciphertext[:gcm.NonceSize()]
-	ciphertext = ciphertext[gcm.NonceSize():]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	nonce := data[:gcm.NonceSize()]
+	data = data[gcm.NonceSize():]
+	plaintext, err := gcm.Open(nil, nonce, data, nil)
 	if err != nil {
 		log.Panic(err)
 	}
 
 	return plaintext
+}
+
+func fileDecryptAndSend(fileName string) []byte {
+
+	ciphertext, err := os.ReadFile(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return Decrypt(Key, ciphertext)
 
 }
 
