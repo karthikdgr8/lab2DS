@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
@@ -22,10 +21,10 @@ var err error
 func SHAify(input string) string {
 	hasher := sha1.New()
 	hasher.Write([]byte(input))
-	base64String := base64.URLEncoding.EncodeToString(hasher.Sum(nil))[0:8]
-	//base64Int := new(big.Int).SetBytes(hasher.Sum(nil)[0:8])
-	//base16String := base64Int.Text(16)
-	return base64String
+	//base64String := base64.URLEncoding.EncodeToString(hasher.Sum(nil))[0:8]
+	base64Int := new(big.Int).SetBytes(hasher.Sum(nil)[0:8])
+	base16String := base64Int.Text(16)
+	return base16String
 }
 
 func GetKeyFromFile() {
