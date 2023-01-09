@@ -4,6 +4,7 @@ import (
 	"lab1DS/src/becauseGO"
 	"lab1DS/src/peerNet"
 	"lab1DS/src/ring"
+	"lab1DS/src/sec"
 	"log"
 	"math/big"
 	"net"
@@ -19,7 +20,7 @@ var NEIGH_LEN int
 func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ownID, joinIp, joinPort string) {
 	OWN_ID = ownID
 	netCallback := becauseGO.Callback{Callback: HandleIncoming}
-	getKeyFromFile()
+	sec.GetKeyFromFile()
 	peerNet.CreateNetworkInstance(ip, port, netCallback)
 
 	NEIGH_LEN = neigborsLen
@@ -38,8 +39,8 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 
 func testPut(filePathToUpload string) {
 	fileName := strings.Split(filePath, "/")
-	hashedFileName := SHAify(fileName[len(fileName)-1])
-	putMessage := new(ring.Message).MakePut(hashedFileName, fileEncryptAndSend(filePathToUpload), RING.GetOwner())
+	hashedFileName := sec.SHAify(fileName[len(fileName)-1])
+	putMessage := new(ring.Message).MakePut(hashedFileName, sec.FileEncryptAndSend(filePathToUpload), RING.GetOwner())
 	owner := RING.GetOwner()
 	peer := RING.Search(hashedFileName).Search(hashedFileName, &owner)
 	peer.Connect()
@@ -48,7 +49,7 @@ func testPut(filePathToUpload string) {
 }
 
 func testGet(fileName string) {
-	hashedFileName := SHAify(fileName)
+	hashedFileName := sec.SHAify(fileName)
 	getMessage := new(ring.Message).MakeGet(hashedFileName, RING.GetOwner())
 	owner := RING.GetOwner()
 	peer := RING.Search(hashedFileName).Search(hashedFileName, &owner)

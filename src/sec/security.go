@@ -1,4 +1,4 @@
-package control
+package sec
 
 import (
 	"crypto/aes"
@@ -27,7 +27,7 @@ func SHAify(input string) string {
 	return base16String
 }
 
-func getKeyFromFile() {
+func GetKeyFromFile() {
 	// The Key should be 16 bytes (AES-128), 24 bytes (AES-192) or
 	// 32 bytes (AES-256)
 	Key, err = os.ReadFile("/Users/karthik/Downloads/key.txt")
@@ -66,7 +66,7 @@ func CalculateSessionKey(priv ecdsa.PrivateKey, X, Y *big.Int) []byte {
 
 }
 
-func fileEncryptAndSend(filePath string) []byte {
+func FileEncryptAndSend(filePath string) []byte {
 
 	file, err := os.ReadFile(filePath)
 
@@ -122,7 +122,7 @@ func Decrypt(key, data []byte) []byte {
 	return plaintext
 }
 
-func fileDecryptAndSend(fileName string) []byte {
+func FileDecryptAndSend(fileName string) []byte {
 
 	ciphertext, err := os.ReadFile(fileName)
 	if err != nil {
@@ -133,7 +133,7 @@ func fileDecryptAndSend(fileName string) []byte {
 
 }
 
-func encryptAESConn(sendData []byte) ([]byte, []byte) {
+func EncryptAESConn(sendData []byte) ([]byte, []byte) {
 
 	block, cipherErr := aes.NewCipher(Key)
 
