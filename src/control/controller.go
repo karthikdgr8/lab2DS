@@ -82,7 +82,7 @@ func testRing(myRing *ring.Ring) {
 func maintenanceLoop(mTime time.Duration) {
 	for {
 		RING.FixFingers()
-		time.Sleep(10 * time.Second) //mTime)
+		time.Sleep(100 * time.Second) //mTime)
 	}
 
 }

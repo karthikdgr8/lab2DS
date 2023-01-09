@@ -92,15 +92,20 @@ func (a *Peer) Notify(owner Peer) *PeerList {
 func (a *Peer) Send(data []byte) *Peer {
 	a.SendSem.Acquire(context.Background(), 1)
 	ciphertext := sec.Encrypt(a.SessionKey, data)
+	log.Println("Sending: ", string(data))
 	peerNet.SendToPeer(a.Connection, ciphertext)
 	a.SendSem.Release(1)
 	return a
 }
 
 func (a *Peer) ReadMessage() Message {
+
 	a.SendSem.Acquire(context.Background(), 1)
+	log.Println("Reading message from peer:")
 	data := peerNet.ListenForData(a.Connection)
+	log.Println("Decrypting..")
 	data = sec.Decrypt(a.SessionKey, data)
+	log.Println("READ: ", string(data))
 	a.SendSem.Release(1)
 	message := Message{}
 	err := json.Unmarshal(data, &message)
@@ -176,10 +181,13 @@ func FromNetwork(conn net.Conn) *Peer {
 	Y := new(big.Int).SetBytes(peerNet.ListenForData(conn))
 	priv := sec.GeneratePrivate()
 	peer.SessionKey = sec.CalculateSessionKey(*priv, X, Y)
+	print("SessionKey: " + string(peer.SessionKey))
 	pub := priv.PublicKey
-	peer.Send(pub.X.Bytes())
-	peer.Send(pub.Y.Bytes())
+	peerNet.SendToPeer(conn, pub.X.Bytes())
+	peerNet.SendToPeer(conn, pub.Y.Bytes())
+	println("WRITTEN KEYS")
 	peer.Connection = conn
+	peer.SendSem = *sem.NewWeighted(1)
 	return peer
 }
 

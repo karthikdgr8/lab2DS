@@ -2,6 +2,7 @@ package peerNet
 
 import (
 	"bufio"
+	"encoding/base64"
 	"lab1DS/src/becauseGO"
 	"log"
 	"net"
@@ -47,13 +48,18 @@ func ListenForData(conn net.Conn) []byte {
 	data, err := connBuf.ReadBytes(byte(DELIM))
 	if len(data) > 1 {
 		data = data[:len(data)-1]
+		buf, err := base64.URLEncoding.DecodeString(string(data))
+		data = buf
+		if err != nil {
+			log.Panic("ERROR DECODING B64 message")
+		}
 	}
 
 	if err != nil {
 		log.Println("ERROR READING DATA: " + err.Error())
 		return nil
 	}
-	println("Read: ", string(data))
+	//println("Read: ", string(data))
 	return data
 }
 
@@ -68,8 +74,11 @@ func ConnectToPeer(ip string, port string) net.Conn {
 }
 
 func SendToPeer(conn net.Conn, data []byte) {
+
 	println("Sending : ", string(data))
-	_, err := conn.Write(append(data, byte(DELIM)))
+
+	var sendBuf = base64.URLEncoding.EncodeToString(data)
+	_, err := conn.Write(append([]byte(sendBuf), byte(DELIM)))
 	if err != nil {
 		log.Println("ERROR SENDING DATA: " + err.Error())
 	}

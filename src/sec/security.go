@@ -30,7 +30,7 @@ func SHAify(input string) string {
 func GetKeyFromFile() {
 	// The Key should be 16 bytes (AES-128), 24 bytes (AES-192) or
 	// 32 bytes (AES-256)
-	Key, err = os.ReadFile("/Users/karthik/Downloads/key.txt")
+	Key, err = os.ReadFile("./files/key.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
