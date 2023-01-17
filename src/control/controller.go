@@ -30,7 +30,6 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 		Join(joinIp, joinPort)
 
 	}
-	log.Println("TESTING Put:")
 	//testRing(RING)
 	//testPut("/Users/karthik/Downloads/key.txt")
 	//testGet("key.txt")

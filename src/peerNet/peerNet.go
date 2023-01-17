@@ -6,6 +6,7 @@ import (
 	"lab1DS/src/becauseGO"
 	"log"
 	"net"
+	"time"
 )
 
 var OWN_IP string
@@ -33,7 +34,6 @@ func startNetworkInstance() {
 func serverRoutine(listener net.Listener) {
 	for {
 		client, err := listener.Accept()
-		log.Println("New client accepted")
 		if err != nil {
 			log.Println("ERROR ACCEPTING CLIENT: " + err.Error())
 		} else {
@@ -43,7 +43,6 @@ func serverRoutine(listener net.Listener) {
 }
 
 func ListenForData(conn net.Conn) []byte {
-	log.Println("Reading from client.")
 	connBuf := bufio.NewReader(conn)
 	data, err := connBuf.ReadBytes(byte(DELIM))
 	if len(data) > 1 {
@@ -64,7 +63,6 @@ func ListenForData(conn net.Conn) []byte {
 }
 
 func ConnectToPeer(ip string, port string) net.Conn {
-	log.Println("Dialing out.")
 	conn, err := net.Dial("tcp", ip+":"+port)
 	if err != nil {
 		log.Println("ERROR ESTABLISHING CLIENT TCP: " + err.Error())
@@ -75,7 +73,7 @@ func ConnectToPeer(ip string, port string) net.Conn {
 
 func SendToPeer(conn net.Conn, data []byte) {
 
-	println("Sending : ", string(data))
+	time.Sleep(100)
 
 	var sendBuf = base64.URLEncoding.EncodeToString(data)
 	_, err := conn.Write(append([]byte(sendBuf), byte(DELIM)))

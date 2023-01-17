@@ -61,7 +61,7 @@ func CalculateSessionKey(priv ecdsa.PrivateKey, X, Y *big.Int) []byte {
 	shared1 := sha256.Sum256(a.Bytes())
 	//shared2 := sha256.Sum256(b.Bytes())
 
-	fmt.Printf("\nShared key (Alice) %x\n", shared1)
+	//fmt.Printf("\nShared key (Alice) %x\n", shared1)
 	return shared1[:]
 
 }

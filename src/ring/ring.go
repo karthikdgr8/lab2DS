@@ -71,7 +71,7 @@ func (a *Ring) AddNeighbour(peer Peer) {
 	if peer.ID == a.owner.ID {
 		return
 	}
-	log.Println("Adding neighbour: " + peer.ID)
+	//log.Println("Adding neighbour: " + peer.ID)
 	a.modifySem.Acquire(context.Background(), 1)
 	//neigh := a.neighbors
 	ownId := a.owner.Int64()
@@ -89,7 +89,7 @@ func (a *Ring) AddNeighbour(peer Peer) {
 	}
 
 	if a.neighbors.Len() > a.MAX_NEIGHBORS*2 {
-		log.Println("Too many neighbours, triggered removal.")
+		//log.Println("Too many neighbours, triggered removal.")
 		removal := (index + a.MAX_NEIGHBORS - 1) % a.neighbors.Len() // Should be the diametrical opposite of index
 		log.Println("Removing index: ", removal, "With id: "+a.neighbors.Get(removal).ID)
 		a.RemoveNeighbor(removal)
@@ -98,7 +98,6 @@ func (a *Ring) AddNeighbour(peer Peer) {
 }
 
 func (a *Ring) RemoveNeighbor(index int) {
-	println("Removing neighbour with index: ", index)
 	a.neighbors = append(a.neighbors[:index], a.neighbors[index+1:]...)
 }
 
@@ -107,7 +106,6 @@ func (a *Ring) RemoveNeighbor(index int) {
 func (a *Ring) Search(term string) *Peer {
 	tmp, _ := new(big.Int).SetString(term, 16)
 	internalTerm := tmp.Int64()
-	println("internal search for ", internalTerm)
 	if a.neighbors.Len() == 0 { // Know no peers, cant help further than self.
 		return &a.owner
 	}
@@ -156,7 +154,6 @@ func (a *Ring) Search(term string) *Peer {
 // FingerSearch  This function conducts a search in the fingertable, and
 // returns the closest found node to the term, which is not its successor. */
 func (a *Ring) FingerSearch(term string) *Peer {
-	println("Finger search for" + term)
 	a.modifySem.Acquire(context.Background(), 1)
 	fingerCopy := a.fingerTable
 	a.modifySem.Release(1)
@@ -176,9 +173,8 @@ func (a *Ring) FingerSearch(term string) *Peer {
 //
 //	that would populate a full fingertable./*
 func (a *Ring) FixFingers() {
-	println("attempting to fix fingers")
 	a.modifySem.Acquire(context.Background(), 1)
-	log.Println("Owner id: " + a.owner.ID)
+	//log.Println("Owner id: " + a.owner.ID)
 	ownerId, err := new(big.Int).SetString(a.owner.ID, 16)
 	if !err {
 		log.Println("ERROR Parsing id whilst building fingerTable")
