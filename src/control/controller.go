@@ -1,6 +1,7 @@
 package control
 
 import (
+	"bufio"
 	"lab1DS/src/becauseGO"
 	"lab1DS/src/peerNet"
 	"lab1DS/src/ring"
@@ -30,10 +31,33 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 		Join(joinIp, joinPort)
 
 	}
+	//log.Println("TESTING Put:")
 	//testRing(RING)
 	//testPut("/Users/karthik/Downloads/key.txt")
 	//testGet("key.txt")
+	go promptCmd()
 	maintenanceLoop(maintenanceTime)
+}
+
+func promptCmd() {
+	for {
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		text := scanner.Text()
+		if strings.Contains(text, "Lookup") {
+			split := strings.Split(text, " ")
+			fileName := split[len(split)-1]
+			log.Println("Looking up", fileName)
+			testGet(fileName)
+		} else if strings.Contains(text, "StoreFile") {
+			split := strings.Split(text, " ")
+			tempFilePath := split[len(split)-1]
+			split = strings.Split(tempFilePath, "/")
+			fileName := split[len(split)-1]
+			log.Println("Storing file", fileName)
+			testPut(tempFilePath)
+		}
+	}
 }
 
 func testPut(filePathToUpload string) {
