@@ -98,12 +98,19 @@ func (a *Peer) Send(data []byte) *Peer {
 	return a
 }
 
-func (a *Peer) ReadMessage() Message {
-
+func (a *Peer) ReadMessage() *Message {
+	if a == nil {
+		log.Println("Error, cannot read from nil peer")
+		return nil
+	}
 	a.SendSem.Acquire(context.Background(), 1)
 	//log.Println("Reading message from peer:")
 	data := peerNet.ListenForData(a.Connection)
 	//log.Println("Decrypting..")
+	if data == nil {
+		a.SendSem.Release(1)
+		return nil
+	}
 	data = sec.Decrypt(a.SessionKey, data)
 	//log.Println("READ: ", string(data))
 	a.SendSem.Release(1)
@@ -113,7 +120,7 @@ func (a *Peer) ReadMessage() Message {
 	if err != nil {
 		log.Println("ERROR READING FROM PEER: "+string(a.ID), " ERROR : ", err.Error())
 	}
-	return message
+	return &message
 }
 
 func (a *Peer) ReadFile() *[]byte {
@@ -179,6 +186,10 @@ func FromNetwork(conn net.Conn) *Peer {
 	peer := new(Peer)
 	X := new(big.Int).SetBytes(peerNet.ListenForData(conn))
 	Y := new(big.Int).SetBytes(peerNet.ListenForData(conn))
+	if X.Int64() == 0 || Y.Int64() == 0 {
+		log.Println("Error reading node keys, discarding connection.")
+		return nil
+	}
 	priv := sec.GeneratePrivate()
 	peer.SessionKey = sec.CalculateSessionKey(*priv, X, Y)
 	//print("SessionKey: " + string(peer.SessionKey))

@@ -169,7 +169,10 @@ func processGet(message *ring.Message, peer *ring.Peer) {
 func HandleIncoming(conn net.Conn) {
 
 	peer := ring.FromNetwork(conn)
-	message := peer.ReadMessage()
+	if peer == nil {
+		return
+	}
+	message := *peer.ReadMessage()
 	peer.ID = message.Owner.ID
 	peer.Ip = message.Owner.Ip
 	peer.Port = message.Owner.Port
