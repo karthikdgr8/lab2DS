@@ -33,7 +33,7 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 	}
 	//log.Println("TESTING Put:")
 	//testRing(RING)
-	//testPut("/Users/karthik/Downloads/key.txt")
+	//makePut("/Users/karthik/Downloads/key.txt")
 	//testGet("key.txt")
 	go promptCmd()
 	maintenanceLoop(maintenanceTime)
@@ -55,20 +55,35 @@ func promptCmd() {
 			split = strings.Split(tempFilePath, "/")
 			fileName := split[len(split)-1]
 			log.Println("Storing file", fileName)
-			testPut(tempFilePath)
+			makePut(tempFilePath)
 		}
 	}
 }
 
-func testPut(filePathToUpload string) {
+func makePut(filePathToUpload string) {
 	fileName := strings.Split(filePath, "/")
 	hashedFileName := sec.SHAify(fileName[len(fileName)-1])
 	putMessage := new(ring.Message).MakePut(hashedFileName, sec.FileEncryptAndSend(filePathToUpload), RING.GetOwner())
 	owner := RING.GetOwner()
 	peer := RING.Search(hashedFileName).Search(hashedFileName, &owner)
+	//var redundantPeers []ring.Peer
+	succ := peer.Search(peer.ID, &owner)
 	peer.Connect()
 	peer.Send(putMessage.Marshal())
 	peer.Close()
+	for i := 0; i < 3; i++ { //Redundancy
+		if succ != nil {
+			id := succ.ID
+			succ.Connect()
+			succ.Send(new(ring.Message).MakePut(hashedFileName, sec.FileEncryptAndSend(filePathToUpload), owner).Marshal())
+			succ.Close()
+			succ = succ.Search(succ.ID, &owner)
+			if id == succ.ID || succ.ID == OWN_ID {
+				log.Println("Reached end of network before redundancy requirement met.")
+				return
+			}
+		}
+	}
 }
 
 func testGet(fileName string) {
