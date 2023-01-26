@@ -32,8 +32,8 @@ func main() {
 	//Parse args
 	OWN_ID := ""
 
-	ip := "127.0.0.1" // defaults to localhost.
-	port := "12323"   //default port
+	ip := "0.0.0.0" // defaults to localhost.
+	port := "12323" //default port
 	maintenanceTime := 30000 * time.Millisecond
 	neighLen := 3
 	joinIp := ""
@@ -43,42 +43,70 @@ func main() {
 
 		switch os.Args[i] {
 		case "-a":
+			if os.Args[i+1] == "empty" {
+				break
+			}
 			ip = os.Args[i+1]
 			println("Binding to IP: ", os.Args[i+1])
 			break
 		case "-p":
+			if os.Args[i+1] == "empty" {
+				break
+			}
 			port = os.Args[i+1]
 			println("Binding Port: ", os.Args[i+1])
 			break
 		case "--ja": //Join ip
+			if os.Args[i+1] == "empty" {
+				break
+			}
 			println("Joining IP: ", os.Args[i+1])
 			joinIp = os.Args[i+1]
 			break
 		case "--jp": //join port
+			if os.Args[i+1] == "empty" {
+				break
+			}
 			println("Joining Port: ", os.Args[i+1])
 			joinPort = os.Args[i+1]
 			break
 		case "--ts":
+			if os.Args[i+1] == "empty" {
+				break
+			}
 			maintInt, _ := strconv.Atoi(os.Args[i+1])
 			maintenanceTime = time.Duration(maintInt) * time.Millisecond
 			println("Stabilizing Time: ", os.Args[i+1])
 			break
 		case "--tff":
-			println(os.Args[i+1])
+			if os.Args[i+1] == "empty" {
+				break
+			}
+			println("Maintenance Time: ", os.Args[i+1])
 			maintInt, _ := strconv.Atoi(os.Args[i+1])
 			maintenanceTime = time.Duration(maintInt) * time.Millisecond
 			break
 		case "--tcp":
+			if os.Args[i+1] == "empty" {
+				break
+			}
 			println(os.Args[i+1])
 			maintInt, _ := strconv.Atoi(os.Args[i+1])
 			maintenanceTime = time.Duration(maintInt) * time.Millisecond
 			break
 		case "-i":
+			if os.Args[i+1] == "empty" {
+				break
+			}
 			println("Overridden ID: ", os.Args[i+1])
 			OWN_ID = os.Args[i+1]
 			break
 		case "-r":
+			if os.Args[i+1] == "empty" {
+				break
+			}
 			neighLen, _ = strconv.Atoi(os.Args[i+1])
+			println("Neigh Len: ", neighLen)
 		default:
 			continue
 		}

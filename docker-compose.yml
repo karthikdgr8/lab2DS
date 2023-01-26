@@ -1,19 +1,41 @@
 version: "3.9"
 services:
-  http_server:
+  peer1:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - PORT=$PORT
     ports:
-      - "80:8080"
+      - "12323:12323"
     environment:
-      - FILE_PATH=/app/files/
-  proxy:
+      - IP=empty
+      - PORT=12323
+      - JOIN_IP=empty
+      - JOIN_PORT=empty
+      - STABILIZE_TIME=100
+      - FIX_FINGER_TIME=100
+      - CHECK_PRED_TIME=100
+      - UNIQ_ID=empty
+      - SUCC_NO=empty
+  peer2:
+    depends_on:
+      - peer1
     build:
       context: .
-      dockerfile: Dockerfile-Proxy
+      dockerfile: Dockerfile
+      args:
+        - PORT=$PORT
     ports:
-      - "81:8081"
+      - "8080:8080"
     environment:
-      - SERVER_IP=http_server
-      - SERVER_PORT=8080
+      - IP=empty
+      - PORT=8080
+      - JOIN_IP=peer1
+      - JOIN_PORT=12323
+      - STABILIZE_TIME=100
+      - FIX_FINGER_TIME=100
+      - CHECK_PRED_TIME=100
+      - UNIQ_ID=empty
+      - SUCC_NO=empty
+

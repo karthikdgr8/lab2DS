@@ -198,6 +198,9 @@ func FromNetwork(conn net.Conn) *Peer {
 	peerNet.SendToPeer(conn, pub.Y.Bytes())
 	//println("WRITTEN KEYS")
 	peer.Connection = conn
+	address := strings.Split(conn.RemoteAddr().String(), ":")
+	peer.Ip = address[0]
+	print("New peer address: ", peer.Ip, ":", peer.Port)
 	peer.SendSem = *sem.NewWeighted(1)
 	return peer
 }

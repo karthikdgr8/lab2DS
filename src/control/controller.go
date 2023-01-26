@@ -27,14 +27,10 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 	NEIGH_LEN = neigborsLen
 	RING = ring.NewRing(OWN_ID, ip, port, 32, NEIGH_LEN)
 	if joinIp != "" && joinPort != "" {
-		log.Println("Attempting to join: " + ip + ":" + port)
+		log.Println("Attempting to join: " + joinIp + ":" + joinPort)
 		Join(joinIp, joinPort)
 
 	}
-	//log.Println("TESTING Put:")
-	//testRing(RING)
-	//makePut("/Users/karthik/Downloads/key.txt")
-	//testGet("key.txt")
 	go promptCmd()
 	maintenanceLoop(maintenanceTime)
 }
@@ -120,7 +116,7 @@ func testRing(myRing *ring.Ring) {
 func maintenanceLoop(mTime time.Duration) {
 	for {
 		RING.FixFingers()
-		time.Sleep(100 * time.Second) //mTime)
+		time.Sleep(mTime)
 	}
 
 }
