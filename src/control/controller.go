@@ -125,6 +125,7 @@ func Join(ip, port string) {
 	owner := RING.GetOwner()
 	entry := ring.NewPeer("", ip, port)
 	log.Println("Searching for closest node on ring.")
+	log.Println("Entrypoint: ", ip, ":", port)
 	closest := entry.Search(owner.ID, &owner) //peerNet.Search(*protocol.NewMessage().MakeSearch(RING.GetOwner().ID, RING.GetOwner()).Marshal(), *entry)
 	if closest == nil {
 		log.Println("ERROR: could not join network.")
@@ -139,6 +140,7 @@ func Join(ip, port string) {
 	for i := 0; i < neighList.Len(); i++ {
 		RING.AddNeighbour(*neighList.Get(i))
 	}
+	log.Print("Join successful")
 }
 
 func processNotify(message *ring.Message, peer *ring.Peer) {
@@ -157,7 +159,6 @@ func processSearch(message *ring.Message, peer *ring.Peer) {
 	term := message.Vars[0]
 	println("Searching for: " + term)
 	best := RING.Search(term)
-
 	res := new(ring.Message).MakeResponse(RING.GetOwner())
 	res.Vars = append(res.Vars, best.ToJsonString())
 	peer.Send(res.Marshal())
@@ -184,9 +185,8 @@ func HandleIncoming(conn net.Conn) {
 		return
 	}
 	message := *peer.ReadMessage()
-	peer.ID = message.Owner.ID
-	peer.Ip = message.Owner.Ip
 	peer.Port = message.Owner.Port
+	peer.ID = message.Owner.ID
 	switch message.Action {
 	case "notify": //Should update neighbor list, and return a list of all known neighbors
 		processNotify(&message, peer)

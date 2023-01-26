@@ -176,9 +176,8 @@ func (a *Ring) FingerSearch(term string) *Peer {
 //
 //	that would populate a full fingertable./*
 func (a *Ring) FixFingers() {
-	//println("attempting to fix fingers")
+	println("attempting to fix fingers")
 	a.modifySem.Acquire(context.Background(), 1)
-	//log.Println("Owner id: " + a.owner.ID)
 	ownerId, err := new(big.Int).SetString(a.owner.ID, 16)
 	if !err {
 		log.Println("ERROR Parsing id whilst building fingerTable")

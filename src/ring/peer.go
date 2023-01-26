@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/big"
 	"net"
+	"strings"
 )
 
 type PeerList []Peer
@@ -149,7 +150,7 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 		a.Close()
 		dest := FromJsonString(res.Vars[0])
 
-		for dest.ID != res.Owner.ID && dest.ID != owner.ID { //&& dest.ID != owner.ID {
+		for dest.ID != res.Owner.ID && dest.ID != owner.ID {
 			//println("SEARCH DESTINATION: "+dest.ID, " SEARCH RESPONSE OWNER : "+res.Owner.ID+" SEARCH TERM:  "+term)
 			dest.Connect()
 			dest.Send(new(Message).MakeSearch(term, *owner).Marshal())
@@ -157,6 +158,13 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 			dest.Close()
 			dest = FromJsonString(res.Vars[0])
 		}
+		println("Destination: ", dest.ID)
+		if dest.ID == res.Owner.ID { // Self is given as reply, we need to change the address
+			print("Node has given itself as return\n")
+			dest.Ip = a.Ip
+			println("RETURN ADDRESS: ", dest.Ip, ":", dest.Port)
+		}
+
 		return dest
 	}
 	return nil

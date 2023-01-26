@@ -3,6 +3,8 @@ package main
 import (
 	"lab1DS/src/control"
 	"log"
+	"math/big"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -115,9 +117,9 @@ func main() {
 	//testSetup()
 
 	if OWN_ID == "" {
-		log.Println("Setting random ID.")
-		OWN_ID = "172b17"
-
+		rand.Seed(time.Now().UnixNano())
+		OWN_ID = new(big.Int).SetInt64(int64(rand.Intn(500000))).Text(16)
+		log.Println("Setting random ID: ", OWN_ID)
 	}
 
 	log.Println("---------------------------STARTING PEER---------------------------")
