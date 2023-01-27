@@ -31,6 +31,7 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 		Join(joinIp, joinPort)
 
 	}
+
 	go promptCmd()
 	maintenanceLoop(maintenanceTime)
 }
@@ -44,7 +45,7 @@ func promptCmd() {
 			split := strings.Split(text, " ")
 			fileName := split[len(split)-1]
 			log.Println("Looking up", fileName)
-			testGet(fileName)
+			makeGet(fileName)
 		} else if strings.Contains(text, "StoreFile") {
 			split := strings.Split(text, " ")
 			tempFilePath := split[len(split)-1]
@@ -56,13 +57,15 @@ func promptCmd() {
 	}
 }
 
+/*
+Function for searching for finding the relevant peer(s) on the network, and pushing a local file to the peer(s)
+*/
 func makePut(filePathToUpload string) {
 	fileName := strings.Split(filePath, "/")
 	hashedFileName := sec.SHAify(fileName[len(fileName)-1])
-	putMessage := new(ring.Message).MakePut(hashedFileName, sec.FileEncryptAndSend(filePathToUpload), RING.GetOwner())
+	putMessage := new(ring.Message).MakePut(hashedFileName, sec.GetEncryptedFile(filePathToUpload), RING.GetOwner())
 	owner := RING.GetOwner()
-	peer := RING.Search(hashedFileName).Search(hashedFileName, &owner)
-	//var redundantPeers []ring.Peer
+	peer := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
 	succ := peer.Search(peer.ID, &owner)
 	peer.Connect()
 	peer.Send(putMessage.Marshal())
@@ -71,7 +74,7 @@ func makePut(filePathToUpload string) {
 		if succ != nil {
 			id := succ.ID
 			succ.Connect()
-			succ.Send(new(ring.Message).MakePut(hashedFileName, sec.FileEncryptAndSend(filePathToUpload), owner).Marshal())
+			succ.Send(new(ring.Message).MakePut(hashedFileName, sec.GetEncryptedFile(filePathToUpload), owner).Marshal())
 			succ.Close()
 			succ = succ.Search(succ.ID, &owner)
 			if id == succ.ID || succ.ID == OWN_ID {
@@ -82,11 +85,12 @@ func makePut(filePathToUpload string) {
 	}
 }
 
-func testGet(fileName string) {
+func makeGet(fileName string) {
 	hashedFileName := sec.SHAify(fileName)
 	getMessage := new(ring.Message).MakeGet(hashedFileName, RING.GetOwner())
 	owner := RING.GetOwner()
-	peer := RING.Search(hashedFileName).Search(hashedFileName, &owner)
+	peer := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
+	peer = peer.Search(hashedFileName, &owner)
 	peer.Connect()
 	peer.Send(getMessage.Marshal())
 	peer.Close()
@@ -158,7 +162,8 @@ func processSearch(message *ring.Message, peer *ring.Peer) {
 	log.Println("Processing search request, Peer: " + peer.ToJsonString())
 	term := message.Vars[0]
 	println("Searching for: " + term)
-	best := RING.Search(term)
+
+	best := RING.ClosestKnown(term)
 	res := new(ring.Message).MakeResponse(RING.GetOwner())
 	res.Vars = append(res.Vars, best.ToJsonString())
 	peer.Send(res.Marshal())

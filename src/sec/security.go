@@ -21,7 +21,6 @@ var err error
 func SHAify(input string) string {
 	hasher := sha1.New()
 	hasher.Write([]byte(input))
-	//base64String := base64.URLEncoding.EncodeToString(hasher.Sum(nil))[0:8]
 	base64Int := new(big.Int).SetBytes(hasher.Sum(nil)[0:8])
 	base16String := base64Int.Text(16)
 	return base16String
@@ -44,40 +43,25 @@ func GeneratePrivate() *ecdsa.PrivateKey {
 	return ret
 }
 
+/*
+Function for calculating a session key, based on values given during handshake.
+*/
 func CalculateSessionKey(priv ecdsa.PrivateKey, X, Y *big.Int) []byte {
-
-	//priva, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	//privb, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-
-	//puba := priva.PublicKey
-	//pubb := privb.PublicKey
-
-	//fmt.Printf("\nPrivate key (Alice) %x", priva.D)
-	//fmt.Printf("\nPrivate key (Bob) %x\n", privb.D)
-
-	//fmt.Printf("\nPublic key (Alice) (%x,%x)", puba.X, puba.Y)
-	//fmt.Printf("\nPublic key (Bob) (%x %x)\n", pubb.X, pubb.Y)
 	pub := priv.PublicKey
 	a, _ := pub.Curve.ScalarMult(X, Y, priv.D.Bytes())
-	//b, _ := pubb.Curve.ScalarMult(pubb.X, pubb.Y, priva.D.Bytes())
 
 	shared1 := sha256.Sum256(a.Bytes())
-	//shared2 := sha256.Sum256(b.Bytes())
 
-	//fmt.Printf("\nShared key (Alice) %x\n", shared1)
 	return shared1[:]
 
 }
 
-func FileEncryptAndSend(filePath string) []byte {
-
+func GetEncryptedFile(filePath string) []byte {
 	file, err := os.ReadFile(filePath)
-
 	if err != nil {
 		return nil
 	}
-
-	return Encrypt(Key, file) // Change Key from reading file to Diffie Hellman
+	return Encrypt(Key, file)
 }
 
 func Encrypt(key, data []byte) []byte {

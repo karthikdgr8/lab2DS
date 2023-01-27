@@ -142,6 +142,11 @@ func FromJsonString(jsonString string) *Peer {
 	return ret
 }
 
+/*
+This function, not to be confused with Ring.ClosestKnown, searches the network for the successor of the term argument
+It is called on the entrypoint peer. For efficiency this peer should be deducted by a previous call to Ring.ClosestKnown
+The returned Peer, is freshly created from the response given from the closest found Peer.
+*/
 func (a *Peer) Search(term string, owner *Peer) *Peer {
 	a.Connect()
 	if a.Connection != nil {
@@ -170,11 +175,17 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 	return nil
 }
 
+/*
+	Set the connection of a peer.
+*/
 func (a *Peer) SetConn(conn net.Conn) {
 	a.SendSem = *sem.NewWeighted(1)
 	a.Connection = conn
 }
 
+/*
+	Convert ID to int64, used in sorting neighbours.
+*/
 func (a *Peer) Int64() *int64 {
 	if a.ID != "" {
 		bigId, succ := new(big.Int).SetString(a.ID, 16)
@@ -190,6 +201,11 @@ func (a *Peer) Int64() *int64 {
 	return nil
 }
 
+/*
+	FromNetwork is a function to build a peer from an encrypted connection over the network.
+	The first handshaking is performed, and then data relevant to further connections with the peer is
+	transmitted.
+*/
 func FromNetwork(conn net.Conn) *Peer {
 	peer := new(Peer)
 	X := new(big.Int).SetBytes(peerNet.ListenForData(conn))
@@ -226,7 +242,7 @@ type Peer struct {
 	Ip         string
 	Port       string
 	ID         string
-	SessionKey []byte       `json:"-"`
-	Connection net.Conn     `json:"-"`
-	SendSem    sem.Weighted `json:"-"`
+	SessionKey []byte       `json:"-"` //Don't marshal
+	Connection net.Conn     `json:"-"` //-|-
+	SendSem    sem.Weighted `json:"-"` //-|-
 }

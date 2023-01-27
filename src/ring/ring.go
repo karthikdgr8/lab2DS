@@ -67,6 +67,10 @@ func (a *Ring) GetSuccessor() *Peer {
 	}
 }
 
+// AddNeighbour
+// The function takes a peer, and adds it, if and only if there is sufficient room in the neighbours list,
+// Or, the peer is closer to any other peer in the list. If this is the case the new node will replace the furthest
+// previously known peer.
 func (a *Ring) AddNeighbour(peer Peer) {
 	if peer.ID == a.owner.ID {
 		return
@@ -102,9 +106,9 @@ func (a *Ring) RemoveNeighbor(index int) {
 	a.neighbors = append(a.neighbors[:index], a.neighbors[index+1:]...)
 }
 
-// Search Not to be confused witht the Peer.search() function this function conducts an internal search on the ring
+// ClosestKnown Not to be confused with the Peer.search() function this function conducts an internal search on the ring
 // itself, and returns the closest found peer either by looking ats its immidiete neighbors, */
-func (a *Ring) Search(term string) *Peer {
+func (a *Ring) ClosestKnown(term string) *Peer {
 	tmp, _ := new(big.Int).SetString(term, 16)
 	internalTerm := tmp.Int64()
 	//println("internal search for ", internalTerm)
@@ -187,7 +191,7 @@ func (a *Ring) FixFingers() {
 
 	for i := 0; i < a.FINGERS_SIZE; i++ {
 		searchId := new(big.Int).SetInt64((ownerId.Int64() + slider<<i) % ID_MAX).Text(16)
-		closest := a.Search(searchId)
+		closest := a.ClosestKnown(searchId)
 		if closest.ID == a.owner.ID {
 			break
 		}
@@ -232,7 +236,7 @@ func (a *Ring) MaintainNeighbors() {
 		}
 		if i == resList.Len() {
 			log.Println("WARNING: ran out of neighbors")
-			a.AddNeighbour(*a.Search(a.owner.ID))
+			a.AddNeighbour(*a.ClosestKnown(a.owner.ID))
 		}
 	}
 

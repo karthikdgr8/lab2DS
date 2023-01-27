@@ -44,7 +44,6 @@ func serverRoutine(listener net.Listener) {
 }
 
 func ListenForData(conn net.Conn) []byte {
-	//log.Println("Reading from client.")
 	connBuf := bufio.NewReader(conn)
 	data, err := connBuf.ReadBytes(byte(DELIM))
 	if len(data) > 1 {
@@ -60,12 +59,10 @@ func ListenForData(conn net.Conn) []byte {
 		log.Println("ERROR READING DATA: " + err.Error())
 		return nil
 	}
-	//println("Read: ", string(data))
 	return data
 }
 
 func ConnectToPeer(ip string, port string) net.Conn {
-	//log.Println("Dialing out.")
 	conn, err := net.Dial("tcp", ip+":"+port)
 	if err != nil {
 		log.Println("ERROR ESTABLISHING CLIENT TCP: " + err.Error())
@@ -88,9 +85,5 @@ func SendToPeer(conn net.Conn, data []byte) {
 
 // Handle new client.
 func handleNewConnection(conn net.Conn) {
-
-	//data := ListenForData(conn)
-	//HandleIncoming(data, conn)
 	controller.Callback(conn)
-	//conn.Close()
 }
