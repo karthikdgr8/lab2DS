@@ -15,6 +15,6 @@ RUN go mod download github.com/holiman/uint256
 WORKDIR /app/src/main
 RUN go build -o /peer
 
-EXPOSE ${PORT}
+EXPOSE $PORT
 
 CMD exec /peer -a $IP -p $PORT --ja $JOIN_IP --jp $JOIN_PORT --ts $STABILIZE_TIME -tff $FIX_FINGER_TIME -tcp $CHECK_PRED_TIME -i $UNIQ_ID -r $SUCC_NO

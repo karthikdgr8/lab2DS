@@ -176,7 +176,7 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 }
 
 /*
-	Set the connection of a peer.
+Set the connection of a peer.
 */
 func (a *Peer) SetConn(conn net.Conn) {
 	a.SendSem = *sem.NewWeighted(1)
@@ -184,7 +184,7 @@ func (a *Peer) SetConn(conn net.Conn) {
 }
 
 /*
-	Convert ID to int64, used in sorting neighbours.
+Convert ID to int64, used in sorting neighbours.
 */
 func (a *Peer) Int64() *int64 {
 	if a.ID != "" {
@@ -202,9 +202,9 @@ func (a *Peer) Int64() *int64 {
 }
 
 /*
-	FromNetwork is a function to build a peer from an encrypted connection over the network.
-	The first handshaking is performed, and then data relevant to further connections with the peer is
-	transmitted.
+FromNetwork is a function to build a peer from an encrypted connection over the network.
+The first handshaking is performed, and then data relevant to further connections with the peer is
+transmitted.
 */
 func FromNetwork(conn net.Conn) *Peer {
 	peer := new(Peer)
@@ -224,7 +224,7 @@ func FromNetwork(conn net.Conn) *Peer {
 	peer.Connection = conn
 	address := strings.Split(conn.RemoteAddr().String(), ":")
 	peer.Ip = address[0]
-	print("New peer address: ", peer.Ip, ":", peer.Port)
+	println("New peer address: ", peer.Ip, ":", peer.Port)
 	peer.SendSem = *sem.NewWeighted(1)
 	return peer
 }
