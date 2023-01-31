@@ -141,7 +141,7 @@ func Join(ip, port string) {
 	entry := ring.NewPeer("", ip, port)
 	log.Println("Searching for closest node on ring.")
 	log.Println("Entrypoint: ", ip, ":", port)
-	closest := entry.Search(owner.ID, &owner) //peerNet.Search(*protocol.NewMessage().MakeSearch(RING.GetOwner().ID, RING.GetOwner()).Marshal(), *entry)
+	closest := entry.Search(owner.ID, &owner)
 	if closest == nil {
 		log.Println("ERROR: could not join network.")
 		return
