@@ -196,7 +196,6 @@ func (a *Ring) Stabilize() {
 //
 //	that would populate a full fingertable./*
 func (a *Ring) FixFingers() {
-	log.Println("MAINTENENCE: fixing fingers")
 	a.modifySem.Acquire(context.Background(), 1)
 	ownerId, err := new(big.Int).SetString(a.owner.ID, 16)
 	if !err {

@@ -123,8 +123,9 @@ func maintenanceLoop(mTime time.Duration) {
 		list := RING.GetNeighbors()
 		log.Print("Known neighbours after maintenance: ")
 		for i := 0; i < list.Len(); i++ {
-			log.Print(list.Get(i).ID, ", ")
+			print(list.Get(i).ID, ", ")
 		}
+		println()
 		time.Sleep(mTime)
 	}
 
