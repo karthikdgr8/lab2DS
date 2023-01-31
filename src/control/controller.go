@@ -186,30 +186,33 @@ func processGet(message *ring.Message, peer *ring.Peer) {
 func HandleIncoming(conn net.Conn) {
 
 	peer := ring.FromNetwork(conn)
-	if peer == nil {
-		return
+	if peer != nil {
+		message := peer.ReadMessage()
+		if message != nil {
+			peer.Port = message.Owner.Port
+			peer.ID = message.Owner.ID
+			switch message.Action {
+			case "notify": //Should update neighbor list, and return a list of all known neighbors
+				processNotify(message, peer)
+				break
+			case "search":
+				processSearch(message, peer)
+				break
+			case "put":
+				processPut(message, peer)
+				break
+			case "get":
+				processGet(message, peer)
+				break
+			case "response":
+				break
+			case "error":
+				break
+			}
+		}
+
 	}
-	message := *peer.ReadMessage()
-	peer.Port = message.Owner.Port
-	peer.ID = message.Owner.ID
-	switch message.Action {
-	case "notify": //Should update neighbor list, and return a list of all known neighbors
-		processNotify(&message, peer)
-		break
-	case "search":
-		processSearch(&message, peer)
-		break
-	case "put":
-		processPut(&message, peer)
-		break
-	case "get":
-		processGet(&message, peer)
-		break
-	case "response":
-		break
-	case "error":
-		break
-	}
+
 }
 
 /*
