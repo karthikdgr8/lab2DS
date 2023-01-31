@@ -111,7 +111,21 @@ func (a *Ring) RemoveNeighbor(index int) {
 func (a *Ring) ClosestKnown(term string) *Peer {
 	tmp, _ := new(big.Int).SetString(term, 16)
 	internalTerm := tmp.Int64()
-	//println("internal search for ", internalTerm)
+	if internalTerm < *a.owner.Int64() {
+		println("Searching through neighbours: ")
+		for i := 0; i < a.neighbors.Len(); i++ {
+			print(a.neighbors[i].ID)
+		}
+		println()
+		println("Search cut short, returning self")
+		return &a.owner
+	}
+	println("internal search for ", internalTerm)
+	println("Searching through neighbours: ")
+	for i := 0; i < a.neighbors.Len(); i++ {
+		print(a.neighbors[i].ID)
+	}
+	print("\n")
 	if a.neighbors.Len() == 0 { // Know no peers, cant help further than self.
 		return &a.owner
 	}
@@ -128,8 +142,10 @@ func (a *Ring) ClosestKnown(term string) *Peer {
 		succIndex = 0
 	}
 	if neigh.Len() < a.MAX_NEIGHBORS*2 { // We have complete knowledge of the ring.
+
 		for i := 0; i < neigh.Len(); i++ {
 			if *neigh[i].Int64() > internalTerm {
+				log.Println("FOUND BEST NEIGHBOUR: ", neigh[i].ID)
 				return &neigh[i]
 			}
 		}

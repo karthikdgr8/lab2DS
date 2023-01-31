@@ -137,13 +137,17 @@ func Join(ip, port string) {
 	}
 	log.Println("Found: " + closest.ID + ". Attempting notify.")
 	neighList := closest.Notify(RING.GetOwner())
+	println("Closest found node ID: ", closest.ID)
 	log.Println("Node responded with: ", neighList.Len(), " nodes. Attempting add")
-	tmp := append(*neighList, *closest)
-	neighList = &tmp
-
+	RING.AddNeighbour(*closest)
 	for i := 0; i < neighList.Len(); i++ {
-		RING.AddNeighbour(*neighList.Get(i))
+		if neighList.Get(i).ID != closest.ID && neighList.Get(i).ID != RING.GetOwner().ID {
+			if neighList.Get(i).Notify(owner) != nil {
+				RING.AddNeighbour(*neighList.Get(i))
+			}
+		}
 	}
+
 	log.Print("Join successful")
 }
 
