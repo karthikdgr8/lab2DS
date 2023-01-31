@@ -61,7 +61,6 @@ func (a *Peer) Connect() *Peer {
 		log.Println("ERROR CONNECTING TO CLIENT")
 		return nil
 	}
-	//log.Println("CONNECTION ESTABLISHED: Handshaking..")
 	peerNet.SendToPeer(a.Connection, pub.X.Bytes())
 	peerNet.SendToPeer(a.Connection, pub.Y.Bytes())
 	X := new(big.Int).SetBytes(peerNet.ListenForData(a.Connection))
@@ -71,7 +70,6 @@ func (a *Peer) Connect() *Peer {
 		return nil
 	}
 	a.SessionKey = sec.CalculateSessionKey(*priv, X, Y)
-	//log.Println("Handshake complete")
 	a.SendSem.Release(1)
 	return a
 }
@@ -85,7 +83,6 @@ func (a *Peer) Notify(owner Peer) *PeerList {
 		if len(res.Vars) != 0 {
 			for i := 0; i < len(res.Vars); i++ {
 				ret.Append(*new(Peer).UnMarshal([]byte(res.Vars[i])))
-				//println("Appended! ", ret.Len())
 			}
 		}
 		a.Close()
@@ -98,7 +95,6 @@ func (a *Peer) Notify(owner Peer) *PeerList {
 func (a *Peer) Send(data []byte) *Peer {
 	a.SendSem.Acquire(context.Background(), 1)
 	ciphertext := sec.Encrypt(a.SessionKey, data)
-	//log.Println("Sending: ", string(data))
 	peerNet.SendToPeer(a.Connection, ciphertext)
 	a.SendSem.Release(1)
 	return a
@@ -110,15 +106,12 @@ func (a *Peer) ReadMessage() *Message {
 		return nil
 	}
 	a.SendSem.Acquire(context.Background(), 1)
-	//log.Println("Reading message from peer:")
 	data := peerNet.ListenForData(a.Connection)
-	//log.Println("Decrypting..")
 	if data == nil {
 		a.SendSem.Release(1)
 		return nil
 	}
 	data = sec.Decrypt(a.SessionKey, data)
-	//log.Println("READ: ", string(data))
 	a.SendSem.Release(1)
 	message := Message{}
 	err := json.Unmarshal(data, &message)
@@ -163,7 +156,6 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 			if len(res.Vars) > 0 {
 				dest := FromJsonString(res.Vars[0])
 				for dest.ID != res.Owner.ID && dest.ID != owner.ID {
-					//println("SEARCH DESTINATION: "+dest.ID, " SEARCH RESPONSE OWNER : "+res.Owner.ID+" SEARCH TERM:  "+term)
 					dest.Connect()
 					dest.Send(new(Message).MakeSearch(term, *owner).Marshal())
 					res = dest.ReadMessage()
@@ -171,9 +163,7 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 					dest = FromJsonString(res.Vars[0])
 				}
 				if dest.ID == res.Owner.ID { // Self is given as reply, we need to change the address
-					print("Node has given itself as return\n")
 					dest.Ip = a.Ip
-					println("RETURN ADDRESS: ", dest.Ip, ":", dest.Port)
 				}
 
 				return dest
@@ -226,15 +216,12 @@ func FromNetwork(conn net.Conn) *Peer {
 	}
 	priv := sec.GeneratePrivate()
 	peer.SessionKey = sec.CalculateSessionKey(*priv, X, Y)
-	//print("SessionKey: " + string(peer.SessionKey))
 	pub := priv.PublicKey
 	peerNet.SendToPeer(conn, pub.X.Bytes())
 	peerNet.SendToPeer(conn, pub.Y.Bytes())
-	//println("WRITTEN KEYS")
 	peer.Connection = conn
 	address := strings.Split(conn.RemoteAddr().String(), ":")
 	peer.Ip = address[0]
-	println("New peer address: ", peer.Ip, ":", peer.Port)
 	peer.SendSem = *sem.NewWeighted(1)
 	return peer
 }

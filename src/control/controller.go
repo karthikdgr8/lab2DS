@@ -67,14 +67,12 @@ func makePut(filePathToUpload string) {
 	owner := RING.GetOwner()
 	peer := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
 	succ := peer.Search(peer.ID, &owner)
-	peer.Connect()
-	peer.Send(putMessage.Marshal())
-	peer.Close()
 	for i := 0; i < 3; i++ { //Redundancy
 		if succ != nil {
 			id := succ.ID
 			succ.Connect()
-			succ.Send(new(ring.Message).MakePut(hashedFileName, sec.GetEncryptedFile(filePathToUpload), owner).Marshal())
+			log.Println("Storing file on node: ", id)
+			succ.Send(putMessage.Marshal())
 			succ.Close()
 			succ = succ.Search(succ.ID, &owner)
 			if id == succ.ID || succ.ID == OWN_ID {
@@ -139,8 +137,7 @@ func Join(ip, port string) {
 	log.Println("Found: " + closest.ID + ". Attempting notify.")
 	neighList := closest.Notify(RING.GetOwner())
 	println("Closest found node ID: ", closest.ID)
-	log.Println("Node responded with: ", neighList.Len(), " nodes. Attempting add. Full list:")
-	log.Println(neighList)
+	log.Println("Node responded with: ", neighList.Len(), " nodes. Attempting add.")
 	RING.AddNeighbour(*closest)
 	for i := 0; i < neighList.Len(); i++ {
 		if neighList.Get(i).ID != closest.ID && neighList.Get(i).ID != RING.GetOwner().ID {
@@ -156,11 +153,9 @@ func Join(ip, port string) {
 func processNotify(message *ring.Message, peer *ring.Peer) {
 	neighList := RING.GetNeighbors()
 
-	println("IN NOTIFY: RESLIST SIZE: ", neighList.Len())
 	res := new(ring.Message).MakeResponse(RING.GetOwner())
 	for i := 0; i < neighList.Len(); i++ {
 		res.Vars = append(res.Vars, neighList.Get(i).ToJsonString())
-		println("ADDED NEIGHBOUR AS NOTIFY RESPONSE: ", neighList.Get(i).ID)
 	}
 	RING.AddNeighbour(*peer)
 	peer.Send(res.Marshal())
@@ -169,16 +164,13 @@ func processNotify(message *ring.Message, peer *ring.Peer) {
 }
 
 func processSearch(message *ring.Message, peer *ring.Peer) {
-	log.Println("Processing search request, Peer: " + peer.ToJsonString())
 	term := message.Vars[0]
-	println("Searching for: " + term)
 
 	best := RING.ClosestKnown(term)
 	res := new(ring.Message).MakeResponse(RING.GetOwner())
 	res.Vars = append(res.Vars, best.ToJsonString())
 	peer.Send(res.Marshal())
 	peer.Close()
-	println("Done processing search")
 }
 
 func processPut(message *ring.Message, peer *ring.Peer) {

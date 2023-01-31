@@ -81,8 +81,6 @@ func (a *Ring) AddNeighbour(peer Peer) {
 		return
 	}
 	log.Println("Adding neighbour: " + peer.ID)
-	//a.modifySem.Acquire(context.Background(), 1)
-	//neigh := a.neighbors
 	ownId := a.owner.Int64()
 
 	a.neighbors = append(a.neighbors, peer)
@@ -98,12 +96,10 @@ func (a *Ring) AddNeighbour(peer Peer) {
 	}
 
 	if a.neighbors.Len() > a.MAX_NEIGHBORS*2 {
-		//log.Println("Too many neighbours, triggered removal.")
 		removal := (index + a.MAX_NEIGHBORS - 1) % a.neighbors.Len() // Should be the diametrical opposite of index
 		log.Println("Removing index: ", removal, "With id: "+a.neighbors.Get(removal).ID)
 		a.RemoveNeighbor(removal)
 	}
-	//a.modifySem.Release(1)
 }
 
 func (a *Ring) RemoveNeighbor(index int) {
@@ -117,20 +113,8 @@ func (a *Ring) ClosestKnown(term string) *Peer {
 	tmp, _ := new(big.Int).SetString(term, 16)
 	internalTerm := tmp.Int64()
 	if internalTerm < *a.owner.Int64() {
-		println("Searching through neighbours: ")
-		for i := 0; i < a.neighbors.Len(); i++ {
-			print(a.neighbors[i].ID)
-		}
-		println()
-		println("Search cut short, returning self")
 		return &a.owner
 	}
-	println("internal search for ", internalTerm)
-	println("Searching through neighbours: ")
-	for i := 0; i < a.neighbors.Len(); i++ {
-		print(a.neighbors[i].ID)
-	}
-	print("\n")
 	if a.neighbors.Len() == 0 { // Know no peers, cant help further than self.
 		return &a.owner
 	}
@@ -150,7 +134,6 @@ func (a *Ring) ClosestKnown(term string) *Peer {
 
 		for i := 0; i < neigh.Len(); i++ {
 			if *neigh[i].Int64() > internalTerm {
-				log.Println("FOUND BEST NEIGHBOUR: ", neigh[i].ID)
 				return &neigh[i]
 			}
 		}
@@ -181,7 +164,6 @@ func (a *Ring) ClosestKnown(term string) *Peer {
 // FingerSearch  This function conducts a search in the fingertable, and
 // returns the closest found node to the term, which is not its successor. */
 func (a *Ring) FingerSearch(term string) *Peer {
-	//println("Finger search for" + term)
 	a.modifySem.Acquire(context.Background(), 1)
 	fingerCopy := a.fingerTable
 	a.modifySem.Release(1)
@@ -214,7 +196,7 @@ func (a *Ring) Stabilize() {
 //
 //	that would populate a full fingertable./*
 func (a *Ring) FixFingers() {
-	println("attempting to fix fingers")
+	log.Println("MAINTENENCE: fixing fingers")
 	a.modifySem.Acquire(context.Background(), 1)
 	ownerId, err := new(big.Int).SetString(a.owner.ID, 16)
 	if !err {
