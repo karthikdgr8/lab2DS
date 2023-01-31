@@ -76,7 +76,7 @@ func SendToPeer(conn net.Conn, data []byte) {
 	//println("Sending : ", string(data))
 
 	var sendBuf = base64.URLEncoding.EncodeToString(data)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 	_, err := conn.Write(append([]byte(sendBuf), byte(DELIM)))
 	if err != nil {
 		log.Println("ERROR SENDING DATA: " + err.Error())
