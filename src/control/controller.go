@@ -195,6 +195,9 @@ func processGet(message *ring.Message, peer *ring.Peer) {
 	} else {
 		log.Println("Node", peer.ID, " does not contain requested file")
 	}
+	res := new(ring.Message).MakeResponse(RING.GetOwner())
+	peer.Send(res.Marshal())
+	peer.Close()
 }
 
 func HandleIncoming(conn net.Conn) {
