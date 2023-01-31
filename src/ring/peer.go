@@ -153,7 +153,7 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 		a.Close()
 		if res != nil {
 
-			if len(res.Vars) > 0 {
+			if len(res.Vars) > 0 { //TODO NOCRASh
 				dest := FromJsonString(res.Vars[0])
 				for dest.ID != res.Owner.ID && dest.ID != owner.ID {
 					dest.Connect()

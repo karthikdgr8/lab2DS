@@ -110,6 +110,7 @@ func (a *Ring) RemoveNeighbor(index int) {
 // ClosestKnown Not to be confused with the Peer.search() function this function conducts an internal search on the ring
 // itself, and returns the closest found peer either by looking ats its immidiete neighbors, */
 func (a *Ring) ClosestKnown(term string) *Peer {
+	sort.Sort(a.neighbors)
 	tmp, _ := new(big.Int).SetString(term, 16)
 	internalTerm := tmp.Int64()
 	if internalTerm < *a.owner.Int64() {
@@ -137,9 +138,11 @@ func (a *Ring) ClosestKnown(term string) *Peer {
 				return &neigh[i]
 			}
 		}
+
 		if *a.owner.Int64() < *neigh[0].Int64() {
 			return &a.owner
 		}
+
 		//If we end up here we have found no larger ids, hence the smallest known is the successor.
 		return &neigh[0]
 	} else { //If we don't have complete knowledge. We check if we, or our immediate successor is the successor of the

@@ -21,7 +21,7 @@ var err error
 func SHAify(input string) string {
 	hasher := sha1.New()
 	hasher.Write([]byte(input))
-	base64Int := new(big.Int).SetBytes(hasher.Sum(nil)[0:8])
+	base64Int := new(big.Int).SetBytes(hasher.Sum(nil)[0:7])
 	base16String := base64Int.Text(16)
 	return base16String
 }

@@ -88,10 +88,15 @@ func makeGet(fileName string) {
 	getMessage := new(ring.Message).MakeGet(hashedFileName, RING.GetOwner())
 	owner := RING.GetOwner()
 	peer := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
-	peer = peer.Search(hashedFileName, &owner)
-	peer.Connect()
-	peer.Send(getMessage.Marshal())
-	peer.Close()
+	succ := peer.Search(hashedFileName, &owner)
+	if succ.ID == OWN_ID {
+		succ = peer.Search(OWN_ID, &owner)
+	}
+	succ.Connect()
+	succ.Send(getMessage.Marshal())
+	res := succ.ReadMessage()
+	log.Println("Response from peer: " + res.Vars[0])
+	succ.Close()
 }
 
 func testRing(myRing *ring.Ring) {
@@ -190,12 +195,16 @@ func processPut(message *ring.Message, peer *ring.Peer) {
 
 func processGet(message *ring.Message, peer *ring.Peer) {
 	file, _ := os.ReadFile(message.Vars[0])
+	var resString string
 	if file != nil {
-		log.Println("Node", peer.ID, " contains requested file")
+		log.Println("Node", RING.GetOwner().ID, " contains requested file")
+		resString = "Node " + RING.GetOwner().ID + " contains requested file"
 	} else {
-		log.Println("Node", peer.ID, " does not contain requested file")
+		log.Println("Node", RING.GetOwner().ID, " does not contain requested file")
+		resString = "Node " + RING.GetOwner().ID + " could not find file"
 	}
 	res := new(ring.Message).MakeResponse(RING.GetOwner())
+	res.Vars = append(res.Vars, resString)
 	peer.Send(res.Marshal())
 	peer.Close()
 }

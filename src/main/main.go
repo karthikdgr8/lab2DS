@@ -2,6 +2,7 @@ package main
 
 import (
 	"lab1DS/src/control"
+	"lab1DS/src/sec"
 	"log"
 	"math/big"
 	"math/rand"
@@ -118,7 +119,7 @@ func main() {
 
 	if OWN_ID == "" {
 		rand.Seed(time.Now().UnixNano())
-		OWN_ID = new(big.Int).SetInt64(int64(rand.Intn(500000))).Text(16)
+		OWN_ID = sec.SHAify(new(big.Int).SetInt64(int64(rand.Intn(500000))).Text(16))
 		log.Println("Setting random ID: ", OWN_ID)
 	}
 
