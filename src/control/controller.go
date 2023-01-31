@@ -189,7 +189,12 @@ func processPut(message *ring.Message, peer *ring.Peer) {
 }
 
 func processGet(message *ring.Message, peer *ring.Peer) {
-	log.Println("Node", peer.ID, "IP:", peer.Ip, "Port:", peer.Port, " contains requested file")
+	_, err := os.ReadFile(message.Vars[0])
+	if err != nil {
+		log.Println("Node", peer.ID, "IP:", peer.Ip, "Port:", peer.Port, " contains requested file")
+	} else {
+		log.Println("Node", peer.ID, "IP:", peer.Ip, "Port:", peer.Port, " does not contain requested file")
+	}
 }
 
 func HandleIncoming(conn net.Conn) {
