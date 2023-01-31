@@ -117,8 +117,14 @@ func testRing(myRing *ring.Ring) {
 
 func maintenanceLoop(mTime time.Duration) {
 	for {
+		log.Println("Maintaining network.")
 		RING.Stabilize()
 		RING.FixFingers()
+		list := RING.GetNeighbors()
+		log.Print("Known neighbours after maintenance: ")
+		for i := 0; i < list.Len(); i++ {
+			log.Print(list.Get(i).ID, ", ")
+		}
 		time.Sleep(mTime)
 	}
 

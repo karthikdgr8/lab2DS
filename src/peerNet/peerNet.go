@@ -56,7 +56,6 @@ func ListenForData(conn net.Conn) []byte {
 	}
 
 	if err != nil {
-		log.Println("ERROR READING DATA: " + err.Error())
 		return nil
 	}
 	return data
