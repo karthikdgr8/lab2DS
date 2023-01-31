@@ -36,7 +36,7 @@ func main() {
 
 	ip := "0.0.0.0" // defaults to localhost.
 	port := "12323" //default port
-	maintenanceTime := 30000 * time.Millisecond
+	maintenanceTime := 15000 * time.Millisecond
 	neighLen := 3
 	joinIp := ""
 	joinPort := ""

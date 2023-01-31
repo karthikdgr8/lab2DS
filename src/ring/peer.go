@@ -59,12 +59,17 @@ func (a *Peer) Connect() *Peer {
 	a.Connection = peerNet.ConnectToPeer(a.Ip, a.Port)
 	if a.Connection == nil {
 		log.Println("ERROR CONNECTING TO CLIENT")
+		return nil
 	}
 	//log.Println("CONNECTION ESTABLISHED: Handshaking..")
 	peerNet.SendToPeer(a.Connection, pub.X.Bytes())
 	peerNet.SendToPeer(a.Connection, pub.Y.Bytes())
 	X := new(big.Int).SetBytes(peerNet.ListenForData(a.Connection))
 	Y := new(big.Int).SetBytes(peerNet.ListenForData(a.Connection))
+	if X == nil || Y == nil {
+		a.SendSem.Release(1)
+		return nil
+	}
 	a.SessionKey = sec.CalculateSessionKey(*priv, X, Y)
 	//log.Println("Handshake complete")
 	a.SendSem.Release(1)

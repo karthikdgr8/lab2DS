@@ -72,11 +72,16 @@ func (a *Ring) GetSuccessor() *Peer {
 // Or, the peer is closer to any other peer in the list. If this is the case the new node will replace the furthest
 // previously known peer.
 func (a *Ring) AddNeighbour(peer Peer) {
+	for i := 0; i < a.neighbors.Len(); i++ {
+		if a.neighbors.Get(i).ID == peer.ID {
+			a.RemoveNeighbor(i)
+		}
+	}
 	if peer.ID == a.owner.ID {
 		return
 	}
 	log.Println("Adding neighbour: " + peer.ID)
-	a.modifySem.Acquire(context.Background(), 1)
+	//a.modifySem.Acquire(context.Background(), 1)
 	//neigh := a.neighbors
 	ownId := a.owner.Int64()
 
@@ -98,7 +103,7 @@ func (a *Ring) AddNeighbour(peer Peer) {
 		log.Println("Removing index: ", removal, "With id: "+a.neighbors.Get(removal).ID)
 		a.RemoveNeighbor(removal)
 	}
-	a.modifySem.Release(1)
+	//a.modifySem.Release(1)
 }
 
 func (a *Ring) RemoveNeighbor(index int) {
@@ -192,6 +197,19 @@ func (a *Ring) FingerSearch(term string) *Peer {
 	return &fingerCopy[fingerCopy.Len()-1]
 }
 
+func (a *Ring) Stabilize() {
+	a.modifySem.Acquire(context.Background(), 1)
+
+	for i := 0; i < a.neighbors.Len(); i++ {
+		if a.neighbors.Get(i).Connect() == nil {
+			a.RemoveNeighbor(i)
+		} else {
+			a.neighbors.Get(i).Close()
+		}
+	}
+	a.modifySem.Release(1)
+}
+
 // FixFingers  Function refreshes the fingers for node a. This is done by conducting a search call for the ids
 //
 //	that would populate a full fingertable./*
@@ -207,15 +225,22 @@ func (a *Ring) FixFingers() {
 
 	for i := 0; i < a.FINGERS_SIZE; i++ {
 		searchId := new(big.Int).SetInt64((ownerId.Int64() + slider<<i) % ID_MAX).Text(16)
-		closest := a.ClosestKnown(searchId)
+		closest := *a.ClosestKnown(searchId)
 		if closest.ID == a.owner.ID {
 			break
 		}
 		//searchMessage := protocol.NewMessage().MakeSearch(searchId, a.owner)
 		if i >= a.fingerTable.Len() {
-			a.fingerTable = append(a.fingerTable, *closest.Search(searchId, &a.owner))
+			tmp := closest.Search(searchId, &a.owner)
+			if tmp != nil {
+				a.fingerTable = append(a.fingerTable, *tmp)
+			}
+
 		} else {
-			a.fingerTable[i] = *closest.Search(searchId, &a.owner)
+			tmp := closest.Search(searchId, &a.owner)
+			if tmp != nil {
+				a.fingerTable[i] = *tmp
+			}
 		}
 
 	}
