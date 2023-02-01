@@ -53,6 +53,9 @@ func (a *Peer) ToJsonString() string {
 }
 
 func (a *Peer) Connect() *Peer {
+	if &a.SendSem == nil {
+		a.SendSem = *sem.NewWeighted(1)
+	}
 	a.SendSem.Acquire(context.Background(), 1)
 	priv := sec.GeneratePrivate()
 	pub := priv.PublicKey
