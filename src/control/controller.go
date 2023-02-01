@@ -157,7 +157,7 @@ func Join(ip, port string) {
 	println("Closest found node ID: ", closest.ID)
 	log.Println("Node responded with: ", neighList.Len(), " nodes. Adding: ")
 	for i := 0; i < neighList.Len(); i++ {
-		println(neighList.Get(i).ID)
+		println(neighList.Get(i).ID, " @ ", neighList.Get(i).Ip)
 	}
 	RING.AddNeighbour(*closest)
 	for i := 0; i < neighList.Len(); i++ {
