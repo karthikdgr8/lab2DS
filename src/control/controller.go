@@ -64,6 +64,9 @@ func makePut(filePathToUpload string) {
 	putMessage := new(ring.Message).MakePut(hashedFileName, sec.GetEncryptedFile(filePathToUpload), RING.GetOwner())
 	owner := RING.GetOwner()
 	peer := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
+	if peer.ID == owner.ID {
+		peer = RING.ClosestKnown(owner.ID)
+	}
 	succ := peer.Search(peer.ID, &owner)
 	for i := 0; i < 3; i++ { //Redundancy
 		if succ != nil {
