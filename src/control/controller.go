@@ -65,21 +65,23 @@ func makePut(filePathToUpload string) {
 	hashedFileName := sec.SHAify(fileName[len(fileName)-1])
 	putMessage := new(ring.Message).MakePut(hashedFileName, sec.GetEncryptedFile(filePathToUpload), RING.GetOwner())
 	owner := RING.GetOwner()
-	peer := RING.ClosestKnown(hashedFileName)
-	if peer.ID == OWN_ID {
-		log.Println("WE ARE CLOSEST.")
-	}
-	peer = peer.Search(hashedFileName, &owner)
-	succ := peer.Search(peer.ID, &owner)
+	succ := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
+
 	for i := 0; i < 3; i++ { //Redundancy
 		if succ != nil {
 			id := succ.ID
-			succ.Connect()
-			log.Println("Storing file on node: ", id)
-			succ.Send(putMessage.Marshal())
-			succ.Close()
+			if id != RING.GetOwner().ID {
+				succ.Connect()
+				log.Println("Storing file on node: ", id)
+				log.Println("Node address: ", succ.Ip, ":", succ.Port)
+				err := succ.Send(putMessage.Marshal())
+				if err == nil {
+					println("ERROR SENDING FILE")
+				}
+				succ.Close()
+			}
 			succ = succ.Search(succ.ID, &owner)
-			if id == succ.ID || succ.ID == OWN_ID {
+			if id == succ.ID {
 				log.Println("Reached end of network before redundancy requirement met.")
 				return
 			}
