@@ -201,6 +201,7 @@ func processGet(message *ring.Message, peer *ring.Peer) {
 func HandleIncoming(conn net.Conn) {
 
 	peer := ring.FromNetwork(conn)
+	RING.AddNeighbour(*peer)
 	if peer != nil {
 		message := peer.ReadMessage()
 		if message != nil {
