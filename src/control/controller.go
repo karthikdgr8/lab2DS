@@ -138,10 +138,12 @@ func Join(ip, port string) {
 	for i := 0; i < neighList.Len(); i++ {
 		println(neighList.Get(i).ID, " @ ", neighList.Get(i).Ip)
 	}
+	log.Println("adding from notify")
 	RING.AddNeighbour(*closest)
 	for i := 0; i < neighList.Len(); i++ {
 		if neighList.Get(i).ID != closest.ID && neighList.Get(i).ID != RING.GetOwner().ID {
 			if neighList.Get(i).Notify(owner) != nil {
+				log.Println("adding from list")
 				RING.AddNeighbour(*neighList.Get(i))
 			}
 		} else if neighList.Get(i).ID == RING.GetOwner().ID {
@@ -159,6 +161,7 @@ func processNotify(message *ring.Message, peer *ring.Peer) {
 	for i := 0; i < neighList.Len(); i++ {
 		res.Vars = append(res.Vars, neighList.Get(i).ToJsonString())
 	}
+	log.Println("Adding from processNotify")
 	RING.AddNeighbour(*peer)
 	peer.Send(res.Marshal())
 	peer.Close()
