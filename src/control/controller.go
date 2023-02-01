@@ -73,6 +73,7 @@ func makePut(filePathToUpload string) {
 			if id != RING.GetOwner().ID {
 				succ.Connect()
 				log.Println("Storing file on node: ", id)
+				log.Println("Node address: ", succ.Ip, ":", succ.Port)
 				err := succ.Send(putMessage.Marshal())
 				if err == nil {
 					println("ERROR SENDING FILE")
