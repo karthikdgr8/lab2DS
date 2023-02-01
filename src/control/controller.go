@@ -200,6 +200,7 @@ func processPut(message *ring.Message, peer *ring.Peer) {
 }
 
 func processGet(message *ring.Message, peer *ring.Peer) {
+	println("FilePath " + filePath + message.Vars[0])
 	file, _ := os.ReadFile(filePath + message.Vars[0])
 	var resString string
 	if file != nil {
