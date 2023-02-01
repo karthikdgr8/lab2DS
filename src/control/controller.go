@@ -71,11 +71,16 @@ func makePut(filePathToUpload string) {
 		if succ != nil {
 			id := succ.ID
 			succ.Connect()
-			log.Println("Storing file on node: ", id)
-			succ.Send(putMessage.Marshal())
+			if id != OWN_ID {
+				log.Println("Storing file on node: ", id)
+				err := succ.Send(putMessage.Marshal())
+				if err == nil {
+					println("ERROR SENDING FILE")
+				}
+			}
 			succ.Close()
 			succ = succ.Search(succ.ID, &owner)
-			if id == succ.ID || succ.ID == OWN_ID {
+			if id == succ.ID {
 				log.Println("Reached end of network before redundancy requirement met.")
 				return
 			}
