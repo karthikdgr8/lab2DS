@@ -91,6 +91,7 @@ func makePut(filePathToUpload string) {
 
 func makeGet(fileName string) {
 	hashedFileName := sec.SHAify(fileName)
+	println("Filename->", fileName, "HashFileName->", hashedFileName)
 	getMessage := new(ring.Message).MakeGet(hashedFileName, RING.GetOwner())
 	owner := RING.GetOwner()
 	peer := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
@@ -200,8 +201,6 @@ func processPut(message *ring.Message, peer *ring.Peer) {
 }
 
 func processGet(message *ring.Message, peer *ring.Peer) {
-	println("Message------------------")
-	println(message.Vars[0], message.Vars[1])
 	file, _ := os.ReadFile(filePath + message.Vars[0])
 	var resString string
 	if file != nil {
