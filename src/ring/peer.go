@@ -147,6 +147,7 @@ The returned Peer, is freshly created from the response given from the closest f
 */
 func (a *Peer) Search(term string, owner *Peer) *Peer {
 	a.Connect()
+	tempIp := a.Ip
 	if a.Connection != nil {
 		a.Send(new(Message).MakeSearch(term, *owner).Marshal())
 		res := a.ReadMessage()
@@ -158,12 +159,13 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 					dest.Connect()
 					dest.Send(new(Message).MakeSearch(term, *owner).Marshal())
 					res = dest.ReadMessage()
+					tempIp = strings.Split(dest.Connection.RemoteAddr().String(), ":")[0]
 					dest.Close()
 					dest = FromJsonString(res.Vars[0])
 				}
 				if dest.ID == res.Owner.ID { // Self is given as reply, we need to change the address
-					log.Println("destination has given selfReply: switching", dest.Ip, " with ", a.Ip)
-					dest.Ip = strings.Split(dest.Connection.RemoteAddr().String(), ":")[0]
+					log.Println("destination has given selfReply: switching", dest.Ip, " with ", tempIp)
+					dest.Ip = tempIp
 				}
 				if dest.Ip == "0.0.0.0" {
 					print("Returned local ip!")
