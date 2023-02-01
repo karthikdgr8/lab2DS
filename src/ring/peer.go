@@ -209,6 +209,7 @@ transmitted.
 */
 func FromNetwork(conn net.Conn) *Peer {
 	peer := new(Peer)
+	//handshake
 	X := new(big.Int).SetBytes(peerNet.ListenForData(conn))
 	Y := new(big.Int).SetBytes(peerNet.ListenForData(conn))
 	if X.Int64() == 0 || Y.Int64() == 0 {
@@ -220,6 +221,7 @@ func FromNetwork(conn net.Conn) *Peer {
 	pub := priv.PublicKey
 	peerNet.SendToPeer(conn, pub.X.Bytes())
 	peerNet.SendToPeer(conn, pub.Y.Bytes())
+	//Handshake finished
 	peer.Connection = conn
 	address := strings.Split(conn.RemoteAddr().String(), ":")
 	peer.Ip = address[0]

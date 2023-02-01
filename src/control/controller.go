@@ -22,7 +22,6 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 	netCallback := becauseGO.Callback{Callback: HandleIncoming}
 	sec.GetKeyFromFile()
 	peerNet.CreateNetworkInstance(ip, port, netCallback)
-
 	NEIGH_LEN = neigborsLen
 	RING = ring.NewRing(OWN_ID, ip, port, 32, NEIGH_LEN)
 	if joinIp != "" && joinPort != "" {
@@ -107,6 +106,7 @@ func makeGet(fileName string) {
 func maintenanceLoop(mTime time.Duration) {
 	for {
 		log.Println("Maintaining network.")
+
 		RING.Stabilize()
 		RING.FixFingers()
 		list := RING.GetNeighbors()
@@ -114,6 +114,7 @@ func maintenanceLoop(mTime time.Duration) {
 		for i := 0; i < list.Len(); i++ {
 			print(list.Get(i).ID, ", ")
 		}
+
 		println()
 		time.Sleep(mTime)
 	}
@@ -199,9 +200,7 @@ func processGet(message *ring.Message, peer *ring.Peer) {
 }
 
 func HandleIncoming(conn net.Conn) {
-
 	peer := ring.FromNetwork(conn)
-	RING.AddNeighbour(*peer)
 	if peer != nil {
 		message := peer.ReadMessage()
 		if message != nil {
