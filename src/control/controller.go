@@ -156,6 +156,9 @@ func Join(ip, port string) {
 	neighList := closest.Notify(RING.GetOwner())
 	println("Closest found node ID: ", closest.ID)
 	log.Println("Node responded with: ", neighList.Len(), " nodes. Adding: ")
+	for i := 0; i < neighList.Len(); i++ {
+		println(neighList.Get(i).ID)
+	}
 	RING.AddNeighbour(*closest)
 	for i := 0; i < neighList.Len(); i++ {
 		if neighList.Get(i).ID != closest.ID && neighList.Get(i).ID != RING.GetOwner().ID {
