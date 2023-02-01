@@ -7,7 +7,6 @@ import (
 	"lab1DS/src/ring"
 	"lab1DS/src/sec"
 	"log"
-	"math/big"
 	"net"
 	"os"
 	"strings"
@@ -103,27 +102,6 @@ func makeGet(fileName string) {
 	res := succ.ReadMessage()
 	log.Println("Response from peer: " + res.Vars[0])
 	succ.Close()
-}
-
-func testRing(myRing *ring.Ring) {
-	mypeer := ring.NewPeer("ddd", "1231", "12212")
-	for i := 0; i < 6; i++ {
-		myRing.AddNeighbour(*ring.NewPeer("a"+new(big.Int).SetInt64(int64(i)).Text(16), "12", "12322"))
-	}
-
-	neighList := myRing.GetNeighbors()
-	println("neighLen: ", neighList.Len())
-	for i := 0; i < neighList.Len(); i++ {
-		log.Println(neighList.Get(i).ToJsonString())
-	}
-
-	myRing.AddNeighbour(*mypeer)
-	neighList = myRing.GetNeighbors()
-	println("neighLen: ", len(neighList))
-	for i := 0; i < neighList.Len(); i++ {
-		log.Println(neighList.Get(i).ToJsonString() + "\n")
-	}
-
 }
 
 func maintenanceLoop(mTime time.Duration) {

@@ -153,7 +153,8 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 		a.Close()
 		if res != nil {
 
-			if len(res.Vars) > 0 { //TODO NOCRASh
+			if len(res.Vars) > 0 {
+				println(res.Vars[0])
 				dest := FromJsonString(res.Vars[0])
 				for dest.ID != res.Owner.ID && dest.ID != owner.ID {
 					dest.Connect()
@@ -222,7 +223,6 @@ func FromNetwork(conn net.Conn) *Peer {
 	peer.Connection = conn
 	address := strings.Split(conn.RemoteAddr().String(), ":")
 	peer.Ip = address[0]
-	log.Println("New incoming connection from: ", peer.Ip)
 	peer.SendSem = *sem.NewWeighted(1)
 	return peer
 }
