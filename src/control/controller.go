@@ -192,15 +192,15 @@ func processSearch(message *ring.Message, peer *ring.Peer) {
 }
 
 func processPut(message *ring.Message, peer *ring.Peer) {
-	log.Println("Node ", peer.ID, "is writing file ", message.Vars[0])
-	err := os.WriteFile(message.Vars[0], []byte(message.Vars[1]), 0777)
+	log.Println("Node ", RING.GetOwner().ID, "is writing file ", message.Vars[0])
+	err := os.WriteFile(filePath+message.Vars[0], []byte(message.Vars[1]), 0777)
 	if err != nil {
 		return
 	}
 }
 
 func processGet(message *ring.Message, peer *ring.Peer) {
-	file, _ := os.ReadFile(message.Vars[0])
+	file, _ := os.ReadFile(filePath + message.Vars[0])
 	var resString string
 	if file != nil {
 		log.Println("Node", RING.GetOwner().ID, " contains requested file")

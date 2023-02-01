@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-var filePath = "/Users/karthik/Public/tmp/"
+var filePath = "../../files/"
 
 func storeFile(fileName string, conn net.Conn) {
 
