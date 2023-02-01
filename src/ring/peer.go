@@ -152,8 +152,7 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 		res := a.ReadMessage()
 		a.Close()
 		if res != nil {
-
-			if len(res.Vars) > 0 { //TODO NOCRASh
+			if len(res.Vars) > 0 {
 				dest := FromJsonString(res.Vars[0])
 				for dest.ID != res.Owner.ID && dest.ID != owner.ID {
 					dest.Connect()
@@ -163,9 +162,12 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 					dest = FromJsonString(res.Vars[0])
 				}
 				if dest.ID == res.Owner.ID { // Self is given as reply, we need to change the address
+					log.Println("destination has given selfReply: switching", dest.Ip, " with ", a.Ip)
 					dest.Ip = a.Ip
 				}
-
+				if dest.Ip == "0.0.0.0" {
+					print("Returned local ip!")
+				}
 				return dest
 			}
 		}
