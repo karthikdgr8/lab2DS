@@ -52,7 +52,7 @@ func promptCmd() {
 			split = strings.Split(tempFilePath, "/")
 			fileName := split[len(split)-1]
 			log.Println("Storing file", fileName)
-			makePut(tempFilePath)
+			makePut(tempFilePath, fileName)
 		}
 	}
 }
@@ -60,9 +60,10 @@ func promptCmd() {
 /*
 Function for searching for finding the relevant peer(s) on the network, and pushing a local file to the peer(s)
 */
-func makePut(filePathToUpload string) {
-	fileName := strings.Split(filePath, "/")
-	hashedFileName := sec.SHAify(fileName[len(fileName)-1])
+func makePut(filePathToUpload, fileName string) {
+
+	hashedFileName := sec.SHAify(fileName)
+	log.Println("PUT STRING: ", fileName, "hashes to: ", hashedFileName)
 	putMessage := new(ring.Message).MakePut(hashedFileName, sec.GetEncryptedFile(filePathToUpload), RING.GetOwner())
 	owner := RING.GetOwner()
 	succ := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
@@ -91,7 +92,6 @@ func makePut(filePathToUpload string) {
 
 func makeGet(fileName string) {
 	hashedFileName := sec.SHAify(fileName)
-	println("Filename->", fileName, "HashFileName->", hashedFileName)
 	getMessage := new(ring.Message).MakeGet(hashedFileName, RING.GetOwner())
 	owner := RING.GetOwner()
 	peer := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
@@ -196,6 +196,7 @@ func processPut(message *ring.Message, peer *ring.Peer) {
 	log.Println("Node ", RING.GetOwner().ID, "is writing file ", message.Vars[0])
 	err := os.WriteFile(filePath+message.Vars[0], []byte(message.Vars[1]), 0777)
 	if err != nil {
+		log.Println("ERROR WRITING FILE: ", err)
 		return
 	}
 }
