@@ -222,6 +222,7 @@ func FromNetwork(conn net.Conn) *Peer {
 	peer.Connection = conn
 	address := strings.Split(conn.RemoteAddr().String(), ":")
 	peer.Ip = address[0]
+	log.Println("New incoming connection from: ", peer.Ip)
 	peer.SendSem = *sem.NewWeighted(1)
 	return peer
 }
