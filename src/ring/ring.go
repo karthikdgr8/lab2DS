@@ -72,6 +72,7 @@ func (a *Ring) GetSuccessor() *Peer {
 // Or, the peer is closer to any other peer in the list. If this is the case the new node will replace the furthest
 // previously known peer.
 func (a *Ring) AddNeighbour(peer Peer) {
+	a.modifySem.Acquire(context.Background(), 1)
 	if peer.Ip == "0.0.0.0" {
 		log.Println("------------------------------ZERO ADDRESS ADDED!-----------------------------------")
 	}
@@ -103,6 +104,7 @@ func (a *Ring) AddNeighbour(peer Peer) {
 		log.Println("Removing index: ", removal, "With id: "+a.neighbors.Get(removal).ID)
 		a.RemoveNeighbor(removal)
 	}
+	a.modifySem.Release(1)
 }
 
 func (a *Ring) RemoveNeighbor(index int) {
@@ -116,7 +118,7 @@ func (a *Ring) ClosestKnown(term string) *Peer {
 	sort.Sort(a.neighbors)
 	tmp, _ := new(big.Int).SetString(term, 16)
 	internalTerm := tmp.Int64()
-	if internalTerm < *a.owner.Int64() {
+	if internalTerm < *a.owner.Int64() { //We are successor.
 		return &a.owner
 	}
 	if a.neighbors.Len() == 0 { // Know no peers, cant help further than self.
