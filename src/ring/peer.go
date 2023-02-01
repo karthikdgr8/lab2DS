@@ -164,7 +164,7 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 					dest = FromJsonString(res.Vars[0])
 				}
 				if dest.ID == res.Owner.ID { // Self is given as reply, we need to change the address
-					dest.Ip = a.Ip
+					dest.Ip = strings.Split(a.Connection.RemoteAddr().String(), ":")[0]
 				}
 
 				return dest
