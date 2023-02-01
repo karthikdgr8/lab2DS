@@ -163,7 +163,7 @@ func (a *Peer) Search(term string, owner *Peer) *Peer {
 				}
 				if dest.ID == res.Owner.ID { // Self is given as reply, we need to change the address
 					log.Println("destination has given selfReply: switching", dest.Ip, " with ", a.Ip)
-					dest.Ip = a.Ip
+					dest.Ip = strings.Split(dest.Connection.RemoteAddr().String(), ":")[0]
 				}
 				if dest.Ip == "0.0.0.0" {
 					print("Returned local ip!")
