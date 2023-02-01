@@ -6,8 +6,7 @@ services:
       dockerfile: Dockerfile
       args:
         - PORT=$PORT
-    ports:
-      - "12323:12323"
+    network_mode: "host"
     environment:
       - IP=empty
       - PORT=12323
@@ -19,23 +18,37 @@ services:
       - UNIQ_ID=empty
       - SUCC_NO=empty
   peer2:
-    depends_on:
-      - peer1
     build:
       context: .
       dockerfile: Dockerfile
       args:
         - PORT=$PORT
-    ports:
-      - "8080:8080"
+    network_mode: "host"
     environment:
       - IP=empty
-      - PORT=8080
-      - JOIN_IP=peer1
+      - PORT=12324
+      - JOIN_IP=134.122.76.107
       - JOIN_PORT=12323
-      - STABILIZE_TIME=100
-      - FIX_FINGER_TIME=100
-      - CHECK_PRED_TIME=100
+      - STABILIZE_TIME=3000
+      - FIX_FINGER_TIME=3000
+      - CHECK_PRED_TIME=3000
+      - UNIQ_ID=empty
+      - SUCC_NO=empty
+  peer3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PORT=$PORT
+    network_mode: "host"
+    environment:
+      - IP=empty
+      - PORT=12325
+      - JOIN_IP=134.122.74.90
+      - JOIN_PORT=12324
+      - STABILIZE_TIME=3000
+      - FIX_FINGER_TIME=3000
+      - CHECK_PRED_TIME=3000
       - UNIQ_ID=empty
       - SUCC_NO=empty
 

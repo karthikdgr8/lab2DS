@@ -7,6 +7,7 @@ import (
 	"lab1DS/src/ring"
 	"lab1DS/src/sec"
 	"log"
+	"math/big"
 	"net"
 	"os"
 	"strings"
@@ -22,6 +23,7 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 	netCallback := becauseGO.Callback{Callback: HandleIncoming}
 	sec.GetKeyFromFile()
 	peerNet.CreateNetworkInstance(ip, port, netCallback)
+
 	NEIGH_LEN = neigborsLen
 	RING = ring.NewRing(OWN_ID, ip, port, 32, NEIGH_LEN)
 	if joinIp != "" && joinPort != "" {
@@ -50,7 +52,7 @@ func promptCmd() {
 			split = strings.Split(tempFilePath, "/")
 			fileName := split[len(split)-1]
 			log.Println("Storing file", fileName)
-			makePut(tempFilePath)
+			makePut(tempFilePath, fileName)
 		}
 	}
 }
@@ -58,19 +60,14 @@ func promptCmd() {
 /*
 Function for searching for finding the relevant peer(s) on the network, and pushing a local file to the peer(s)
 */
-func makePut(filePathToUpload string) {
-	fileName := strings.Split(filePath, "/")
-	hashedFileName := sec.SHAify(fileName[len(fileName)-1])
+func makePut(filePathToUpload, fileName string) {
+
+	hashedFileName := sec.SHAify(fileName)
+	log.Println("PUT STRING: ", fileName, "hashes to: ", hashedFileName)
 	putMessage := new(ring.Message).MakePut(hashedFileName, sec.GetEncryptedFile(filePathToUpload), RING.GetOwner())
 	owner := RING.GetOwner()
 	succ := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
-	/*
-		if peer.ID == owner.ID{
-			peer = RING.ClosestKnown(owner.ID)
-		}
-		succ := peer.Search(peer.ID, &owner)
 
-	*/
 	for i := 0; i < 3; i++ { //Redundancy
 		if succ != nil {
 			id := succ.ID
@@ -109,10 +106,30 @@ func makeGet(fileName string) {
 	succ.Close()
 }
 
+func testRing(myRing *ring.Ring) {
+	mypeer := ring.NewPeer("ddd", "1231", "12212")
+	for i := 0; i < 6; i++ {
+		myRing.AddNeighbour(*ring.NewPeer("a"+new(big.Int).SetInt64(int64(i)).Text(16), "12", "12322"))
+	}
+
+	neighList := myRing.GetNeighbors()
+	println("neighLen: ", neighList.Len())
+	for i := 0; i < neighList.Len(); i++ {
+		log.Println(neighList.Get(i).ToJsonString())
+	}
+
+	myRing.AddNeighbour(*mypeer)
+	neighList = myRing.GetNeighbors()
+	println("neighLen: ", len(neighList))
+	for i := 0; i < neighList.Len(); i++ {
+		log.Println(neighList.Get(i).ToJsonString() + "\n")
+	}
+
+}
+
 func maintenanceLoop(mTime time.Duration) {
 	for {
 		log.Println("Maintaining network.")
-
 		RING.Stabilize()
 		RING.FixFingers()
 		list := RING.GetNeighbors()
@@ -120,7 +137,6 @@ func maintenanceLoop(mTime time.Duration) {
 		for i := 0; i < list.Len(); i++ {
 			print(list.Get(i).ID, ", ")
 		}
-
 		println()
 		time.Sleep(mTime)
 	}
@@ -140,20 +156,13 @@ func Join(ip, port string) {
 	log.Println("Found: " + closest.ID + ". Attempting notify.")
 	neighList := closest.Notify(RING.GetOwner())
 	println("Closest found node ID: ", closest.ID)
-	log.Println("Node responded with: ", neighList.Len(), " nodes. Adding: ")
-	for i := 0; i < neighList.Len(); i++ {
-		println(neighList.Get(i).ID, " @ ", neighList.Get(i).Ip)
-	}
-	log.Println("adding from notify")
+	log.Println("Node responded with: ", neighList.Len(), " nodes. Attempting add.")
 	RING.AddNeighbour(*closest)
 	for i := 0; i < neighList.Len(); i++ {
 		if neighList.Get(i).ID != closest.ID && neighList.Get(i).ID != RING.GetOwner().ID {
 			if neighList.Get(i).Notify(owner) != nil {
-				log.Println("adding from list")
 				RING.AddNeighbour(*neighList.Get(i))
 			}
-		} else if neighList.Get(i).ID == RING.GetOwner().ID {
-			println("Own id in notify")
 		}
 	}
 
@@ -167,7 +176,6 @@ func processNotify(message *ring.Message, peer *ring.Peer) {
 	for i := 0; i < neighList.Len(); i++ {
 		res.Vars = append(res.Vars, neighList.Get(i).ToJsonString())
 	}
-	log.Println("Adding from processNotify")
 	RING.AddNeighbour(*peer)
 	peer.Send(res.Marshal())
 	peer.Close()
@@ -186,14 +194,15 @@ func processSearch(message *ring.Message, peer *ring.Peer) {
 
 func processPut(message *ring.Message, peer *ring.Peer) {
 	log.Println("Node ", RING.GetOwner().ID, "is writing file ", message.Vars[0])
-	err := os.WriteFile(message.Vars[0], []byte(message.Vars[1]), 0777)
+	err := os.WriteFile(filePath+message.Vars[0], []byte(message.Vars[1]), 0777)
 	if err != nil {
+		log.Println("ERROR WRITING FILE: ", err)
 		return
 	}
 }
 
 func processGet(message *ring.Message, peer *ring.Peer) {
-	file, _ := os.ReadFile(message.Vars[0])
+	file, _ := os.ReadFile(filePath + message.Vars[0])
 	var resString string
 	if file != nil {
 		log.Println("Node", RING.GetOwner().ID, " contains requested file")
@@ -209,6 +218,7 @@ func processGet(message *ring.Message, peer *ring.Peer) {
 }
 
 func HandleIncoming(conn net.Conn) {
+
 	peer := ring.FromNetwork(conn)
 	if peer != nil {
 		message := peer.ReadMessage()

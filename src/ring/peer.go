@@ -53,6 +53,9 @@ func (a *Peer) ToJsonString() string {
 }
 
 func (a *Peer) Connect() *Peer {
+	if &a.SendSem == nil {
+		a.SendSem = *sem.NewWeighted(1)
+	}
 	a.SendSem.Acquire(context.Background(), 1)
 	priv := sec.GeneratePrivate()
 	pub := priv.PublicKey
@@ -147,26 +150,29 @@ The returned Peer, is freshly created from the response given from the closest f
 */
 func (a *Peer) Search(term string, owner *Peer) *Peer {
 	a.Connect()
+	tempIp := a.Ip
 	if a.Connection != nil {
 		a.Send(new(Message).MakeSearch(term, *owner).Marshal())
 		res := a.ReadMessage()
 		a.Close()
 		if res != nil {
-
 			if len(res.Vars) > 0 {
-				println(res.Vars[0])
 				dest := FromJsonString(res.Vars[0])
 				for dest.ID != res.Owner.ID && dest.ID != owner.ID {
 					dest.Connect()
 					dest.Send(new(Message).MakeSearch(term, *owner).Marshal())
 					res = dest.ReadMessage()
+					tempIp = strings.Split(dest.Connection.RemoteAddr().String(), ":")[0]
 					dest.Close()
 					dest = FromJsonString(res.Vars[0])
 				}
 				if dest.ID == res.Owner.ID { // Self is given as reply, we need to change the address
-					dest.Ip = strings.Split(a.Connection.RemoteAddr().String(), ":")[0]
+					log.Println("destination has given selfReply: switching", dest.Ip, " with ", tempIp)
+					dest.Ip = tempIp
 				}
-
+				if dest.Ip == "0.0.0.0" {
+					print("Returned local ip!")
+				}
 				return dest
 			}
 		}
@@ -209,7 +215,6 @@ transmitted.
 */
 func FromNetwork(conn net.Conn) *Peer {
 	peer := new(Peer)
-	//handshake
 	X := new(big.Int).SetBytes(peerNet.ListenForData(conn))
 	Y := new(big.Int).SetBytes(peerNet.ListenForData(conn))
 	if X.Int64() == 0 || Y.Int64() == 0 {
@@ -221,7 +226,6 @@ func FromNetwork(conn net.Conn) *Peer {
 	pub := priv.PublicKey
 	peerNet.SendToPeer(conn, pub.X.Bytes())
 	peerNet.SendToPeer(conn, pub.Y.Bytes())
-	//Handshake finished
 	peer.Connection = conn
 	address := strings.Split(conn.RemoteAddr().String(), ":")
 	peer.Ip = address[0]
