@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
-	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -107,62 +106,4 @@ func Decrypt(key, data []byte) []byte {
 	}
 
 	return plaintext
-}
-
-func FileDecryptAndSend(fileName string) []byte {
-
-	ciphertext, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return Decrypt(Key, ciphertext)
-
-}
-
-func EncryptAESConn(sendData []byte) ([]byte, []byte) {
-
-	block, cipherErr := aes.NewCipher(Key)
-
-	if cipherErr != nil {
-		fmt.Errorf("Can't create cipher:", cipherErr)
-
-		return nil, nil
-	}
-
-	iv := make([]byte, aes.BlockSize)
-
-	if _, randReadErr := io.ReadFull(rand.Reader, iv); randReadErr != nil {
-		fmt.Errorf("Can't build random iv", randReadErr)
-		return nil, nil
-	}
-
-	stream := cipher.NewCFBEncrypter(block, iv)
-
-	encrypted := make([]byte, len(sendData))
-
-	stream.XORKeyStream(encrypted, sendData)
-
-	return iv, encrypted
-
-}
-
-func decryptAESConn(iv []byte, recvData []byte) []byte {
-
-	block, cipherErr := aes.NewCipher(Key)
-
-	if cipherErr != nil {
-		fmt.Errorf("Can't create cipher:", cipherErr)
-
-		return nil
-	}
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-
-	decrypted := make([]byte, len(recvData))
-
-	stream.XORKeyStream(decrypted, recvData)
-
-	return decrypted
-
 }

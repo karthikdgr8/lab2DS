@@ -50,28 +50,28 @@ func main() {
 				break
 			}
 			ip = os.Args[i+1]
-			println("Binding to IP: ", os.Args[i+1])
+			log.Println("Binding to IP:", ip)
 			break
 		case "-p":
 			if os.Args[i+1] == "empty" {
 				break
 			}
 			port = os.Args[i+1]
-			println("Binding Port: ", os.Args[i+1])
+			log.Println("Binding Port:", port)
 			break
 		case "--ja": //Join ip
 			if os.Args[i+1] == "empty" {
 				break
 			}
-			println("Joining IP: ", os.Args[i+1])
 			joinIp = os.Args[i+1]
+			log.Println("Joining IP:", joinIp)
 			break
 		case "--jp": //join port
 			if os.Args[i+1] == "empty" {
 				break
 			}
-			println("Joining Port: ", os.Args[i+1])
 			joinPort = os.Args[i+1]
+			log.Println("Joining Port:", joinPort)
 			break
 		case "--ts":
 			if os.Args[i+1] == "empty" {
@@ -79,13 +79,13 @@ func main() {
 			}
 			maintInt, _ := strconv.Atoi(os.Args[i+1])
 			maintenanceTime = time.Duration(maintInt) * time.Millisecond
-			println("Stabilizing Time: ", os.Args[i+1])
+			log.Println("Stabilizing Time: ", os.Args[i+1])
 			break
 		case "--tff":
 			if os.Args[i+1] == "empty" {
 				break
 			}
-			println("Maintenance Time: ", os.Args[i+1])
+			log.Println("Maintenance Time: ", os.Args[i+1])
 			maintInt, _ := strconv.Atoi(os.Args[i+1])
 			maintenanceTime = time.Duration(maintInt) * time.Millisecond
 			break
@@ -93,16 +93,16 @@ func main() {
 			if os.Args[i+1] == "empty" {
 				break
 			}
-			println(os.Args[i+1])
 			maintInt, _ := strconv.Atoi(os.Args[i+1])
 			maintenanceTime = time.Duration(maintInt) * time.Millisecond
+			log.Println("Check Predecessor Time:" + os.Args[i+1])
 			break
 		case "-i":
 			if os.Args[i+1] == "empty" {
 				break
 			}
-			println("Overridden ID: ", os.Args[i+1])
 			OWN_ID = os.Args[i+1]
+			println("Overridden ID: ", OWN_ID)
 			break
 		case "-r":
 			if os.Args[i+1] == "empty" {
@@ -114,8 +114,6 @@ func main() {
 			continue
 		}
 	}
-
-	//testSetup()
 
 	if OWN_ID == "" {
 		rand.Seed(time.Now().UnixNano())

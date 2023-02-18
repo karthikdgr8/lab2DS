@@ -77,6 +77,7 @@ func (a *Peer) Connect() *Peer {
 	return a
 }
 
+/* Function that returns a list of neighbours when a notify message is received */
 func (a *Peer) Notify(owner Peer) *PeerList {
 	a.Connect()
 	if a.Connection != nil {
@@ -95,6 +96,7 @@ func (a *Peer) Notify(owner Peer) *PeerList {
 	}
 }
 
+/* Function that encrypts and sends data to a peer */
 func (a *Peer) Send(data []byte) *Peer {
 	a.SendSem.Acquire(context.Background(), 1)
 	ciphertext := sec.Encrypt(a.SessionKey, data)

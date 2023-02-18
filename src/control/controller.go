@@ -7,7 +7,6 @@ import (
 	"lab1DS/src/ring"
 	"lab1DS/src/sec"
 	"log"
-	"math/big"
 	"net"
 	"os"
 	"strings"
@@ -18,17 +17,21 @@ var OWN_ID string
 var RING *ring.Ring
 var NEIGH_LEN int
 
+/*
+This function is the main entry point for the program, where it sets up the network and ring structures, starts the
+maintenance loop and console prompt, and joins the ring if necessary.
+*/
 func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ownID, joinIp, joinPort string) {
 	OWN_ID = ownID
 	netCallback := becauseGO.Callback{Callback: HandleIncoming}
-	sec.GetKeyFromFile()
-	peerNet.CreateNetworkInstance(ip, port, netCallback)
+	sec.GetKeyFromFile()                                 // Read encryption key from file to memory
+	peerNet.CreateNetworkInstance(ip, port, netCallback) // Create a network with IP and Port
 
 	NEIGH_LEN = neigborsLen
-	RING = ring.NewRing(OWN_ID, ip, port, 32, NEIGH_LEN)
+	RING = ring.NewRing(OWN_ID, ip, port, 32, NEIGH_LEN) // Create a new ring
 	if joinIp != "" && joinPort != "" {
 		log.Println("Attempting to join: " + joinIp + ":" + joinPort)
-		Join(joinIp, joinPort)
+		Join(joinIp, joinPort) // If join IP and Port specified, try joining and exchange peerLists
 
 	}
 
@@ -36,6 +39,10 @@ func StartUp(ip, port string, neigborsLen int, maintenanceTime time.Duration, ow
 	maintenanceLoop(maintenanceTime)
 }
 
+/*
+This function implements a distributed file sharing system, where users can store and retrieve files from a network of peers.
+The makeGet and makePut functions are likely responsible for initiating the file transfer process by sending requeststo other peers in the network.
+*/
 func promptCmd() {
 	for {
 		scanner := bufio.NewScanner(os.Stdin)
@@ -64,8 +71,13 @@ func makePut(filePathToUpload, fileName string) {
 
 	hashedFileName := sec.SHAify(fileName)
 	log.Println("PUT STRING: ", fileName, "hashes to: ", hashedFileName)
+
+	// Create a new message with the name of the file to be pushed to network and the encrypted file itself
 	putMessage := new(ring.Message).MakePut(hashedFileName, sec.GetEncryptedFile(filePathToUpload), RING.GetOwner())
+
 	owner := RING.GetOwner()
+
+	// Search for the position of the file in the ring i.e the peer that has to hold the file
 	succ := RING.ClosestKnown(hashedFileName).Search(hashedFileName, &owner)
 
 	for i := 0; i < 3; i++ { //Redundancy
@@ -77,7 +89,7 @@ func makePut(filePathToUpload, fileName string) {
 				log.Println("Node address: ", succ.Ip, ":", succ.Port)
 				err := succ.Send(putMessage.Marshal())
 				if err == nil {
-					println("ERROR SENDING FILE")
+					log.Println("ERROR SENDING FILE")
 				}
 				succ.Close()
 			}
@@ -90,6 +102,14 @@ func makePut(filePathToUpload, fileName string) {
 	}
 }
 
+/*
+This function is part of a distributed file-sharing system that uses a ring topology.
+The function is used to initiate a file retrieval operation by searching for the node responsible for storing the file
+and sending a request to that node to retrieve the file.
+The function first computes the hash of the filename, identifies the closest known neighbor to the hashed
+filename, and searches for the successor node in the ring.
+Once it finds the successor node, it sends a GET request to retrieve the file and waits for the response.
+*/
 func makeGet(fileName string) {
 	hashedFileName := sec.SHAify(fileName)
 	getMessage := new(ring.Message).MakeGet(hashedFileName, RING.GetOwner())
@@ -106,27 +126,11 @@ func makeGet(fileName string) {
 	succ.Close()
 }
 
-func testRing(myRing *ring.Ring) {
-	mypeer := ring.NewPeer("ddd", "1231", "12212")
-	for i := 0; i < 6; i++ {
-		myRing.AddNeighbour(*ring.NewPeer("a"+new(big.Int).SetInt64(int64(i)).Text(16), "12", "12322"))
-	}
-
-	neighList := myRing.GetNeighbors()
-	println("neighLen: ", neighList.Len())
-	for i := 0; i < neighList.Len(); i++ {
-		log.Println(neighList.Get(i).ToJsonString())
-	}
-
-	myRing.AddNeighbour(*mypeer)
-	neighList = myRing.GetNeighbors()
-	println("neighLen: ", len(neighList))
-	for i := 0; i < neighList.Len(); i++ {
-		log.Println(neighList.Get(i).ToJsonString() + "\n")
-	}
-
-}
-
+/*
+This function maintains a logical ring topology, where each node periodically performs maintenance tasks to update
+the topology and detect failed nodes. This function is used to ensure that the ring topology remains stable and all
+nodes are aware of their neighbors.
+*/
 func maintenanceLoop(mTime time.Duration) {
 	for {
 		log.Println("Maintaining network.")
@@ -143,6 +147,10 @@ func maintenanceLoop(mTime time.Duration) {
 
 }
 
+/*
+The function is used to join an existing ring network by connecting to a known node, obtaining a neighbor
+list from the node, and updating the ring topology with the new node and its neighbors.
+*/
 func Join(ip, port string) {
 	owner := RING.GetOwner()
 	entry := ring.NewPeer("", ip, port)
@@ -169,6 +177,11 @@ func Join(ip, port string) {
 	log.Print("Join successful")
 }
 
+/*
+This function respond to a notification message from a neighbor by returning a list of all the neighbors in the ring, adding the peer
+to the neighbor list, and then closing the connection, where each node maintains information
+about its neighbors in the ring, and nodes can join or leave the ring dynamically.
+*/
 func processNotify(message *ring.Message, peer *ring.Peer) {
 	neighList := RING.GetNeighbors()
 
@@ -182,6 +195,12 @@ func processNotify(message *ring.Message, peer *ring.Peer) {
 
 }
 
+/*
+The function is used to process a search request from a peer by finding the closest known node to the search
+term and returning its JSON representation in the response message.
+This function may be used to implement a distributed search mechanism where peers can search for files or other
+resources in the network by sending search requests to the closest known nodes.
+*/
 func processSearch(message *ring.Message, peer *ring.Peer) {
 	term := message.Vars[0]
 
@@ -192,6 +211,10 @@ func processSearch(message *ring.Message, peer *ring.Peer) {
 	peer.Close()
 }
 
+/*
+The function is used to handle a "PUT" request from a peer, which contains the filename and contents of the file to be written to disk.
+The function writes the file to disk and logs a message indicating that the write was successful.
+*/
 func processPut(message *ring.Message, peer *ring.Peer) {
 	log.Println("Node ", RING.GetOwner().ID, "is writing file ", message.Vars[0])
 	err := os.WriteFile(filePath+message.Vars[0], []byte(message.Vars[1]), 0777)
@@ -201,6 +224,10 @@ func processPut(message *ring.Message, peer *ring.Peer) {
 	}
 }
 
+/*
+The function allows nodes to share files with each other and is used to handle a "GET" request from a peer, which contains the filename of the file to be retrieved.
+The function reads the file from disk, logs a message indicating success or failure, and sends a response to the peer indicating the status of the file retrieval.
+*/
 func processGet(message *ring.Message, peer *ring.Peer) {
 	file, _ := os.ReadFile(filePath + message.Vars[0])
 	var resString string
@@ -217,6 +244,10 @@ func processGet(message *ring.Message, peer *ring.Peer) {
 	peer.Close()
 }
 
+/*
+The function is used to handle incoming network connections from peers, read incoming messages, and dispatch
+them to the appropriate processing functions based on the message action.
+*/
 func HandleIncoming(conn net.Conn) {
 
 	peer := ring.FromNetwork(conn)
@@ -237,10 +268,6 @@ func HandleIncoming(conn net.Conn) {
 				break
 			case "get":
 				processGet(message, peer)
-				break
-			case "response":
-				break
-			case "error":
 				break
 			}
 		}

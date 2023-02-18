@@ -19,6 +19,7 @@ type Ring struct {
 	modifySem     sem.Weighted
 }
 
+// Creates a new ring.
 func NewRing(ownId, ownIp, ownPort string, fingerSize int, maxNeighbors int) *Ring {
 	ret := new(Ring)
 	ret.FINGERS_SIZE = fingerSize
@@ -28,10 +29,12 @@ func NewRing(ownId, ownIp, ownPort string, fingerSize int, maxNeighbors int) *Ri
 	return ret
 }
 
+// GetOwner Function for getting ourselves.
 func (a *Ring) GetOwner() Peer {
 	return a.owner
 }
 
+// GetNeighbors Interface function to get all neighbours in the list.
 func (a *Ring) GetNeighbors() PeerList {
 	a.modifySem.Acquire(context.Background(), 1)
 	ret := a.neighbors // Supposedly hard copy
@@ -39,6 +42,7 @@ func (a *Ring) GetNeighbors() PeerList {
 	return ret
 }
 
+// Function to get our predecessor.
 func (a *Ring) GetPredecessor() *Peer {
 	index := 0
 	for i := 0; i < a.neighbors.Len(); i++ {
@@ -48,9 +52,12 @@ func (a *Ring) GetPredecessor() *Peer {
 			break
 		}
 	}
+	// Return whatever is before us in the ring using the index of our successor.
+	// Modulo is needed to wrap around in case our successor is at index 0
 	return &a.neighbors[index-1%a.neighbors.Len()]
 }
 
+// GetSuccessor Get our immediate successor.
 func (a *Ring) GetSuccessor() *Peer {
 	index := 0
 	for i := 0; i < a.neighbors.Len(); i++ {
@@ -70,7 +77,7 @@ func (a *Ring) GetSuccessor() *Peer {
 // AddNeighbour
 // The function takes a peer, and adds it, if and only if there is sufficient room in the neighbours list,
 // Or, the peer is closer to any other peer in the list. If this is the case the new node will replace the furthest
-// previously known peer.
+// previously known peer. This replacement is conducted by finding the diametrical oposite peer.
 func (a *Ring) AddNeighbour(peer Peer) {
 	for i := 0; i < a.neighbors.Len(); i++ {
 		if a.neighbors.Get(i).ID == peer.ID {
@@ -95,7 +102,9 @@ func (a *Ring) AddNeighbour(peer Peer) {
 		}
 	}
 
-	if a.neighbors.Len() > a.MAX_NEIGHBORS*2 {
+	if a.neighbors.Len() > a.MAX_NEIGHBORS*2 { //This is triggered if the list is bigger than max, and we need to remove someone.
+		//This part is integral in the maintenence of the ring.
+		//The diametrical opposite is found by going a certain distance in the array.
 		removal := (index + a.MAX_NEIGHBORS - 1) % a.neighbors.Len() // Should be the diametrical opposite of index
 		log.Println("Removing index: ", removal, "With id: "+a.neighbors.Get(removal).ID)
 		a.RemoveNeighbor(removal)
@@ -108,7 +117,7 @@ func (a *Ring) RemoveNeighbor(index int) {
 }
 
 // ClosestKnown Not to be confused with the Peer.search() function this function conducts an internal search on the ring
-// itself, and returns the closest found peer either by looking ats its immidiete neighbors, */
+// itself, and returns the closest found peer either by looking ats its immediate neighbors, */
 func (a *Ring) ClosestKnown(term string) *Peer {
 	sort.Sort(a.neighbors)
 	tmp, _ := new(big.Int).SetString(term, 16)
@@ -182,6 +191,7 @@ func (a *Ring) FingerSearch(term string) *Peer {
 	return &fingerCopy[fingerCopy.Len()-1]
 }
 
+// Function to run stabilization on the imediate neighbours.
 func (a *Ring) Stabilize() {
 	a.modifySem.Acquire(context.Background(), 1)
 
@@ -197,7 +207,7 @@ func (a *Ring) Stabilize() {
 
 // FixFingers  Function refreshes the fingers for node a. This is done by conducting a search call for the ids
 //
-//	that would populate a full fingertable./*
+//	that would populate a full finger-table.
 func (a *Ring) FixFingers() {
 	a.modifySem.Acquire(context.Background(), 1)
 	ownerId, err := new(big.Int).SetString(a.owner.ID, 16)
@@ -208,12 +218,12 @@ func (a *Ring) FixFingers() {
 	var slider int64 = 1
 
 	for i := 0; i < a.FINGERS_SIZE; i++ {
+		//This id is created by using our id + 2^i wrapped around in the id-space using modulo.
 		searchId := new(big.Int).SetInt64((ownerId.Int64() + slider<<i) % ID_MAX).Text(16)
 		closest := *a.ClosestKnown(searchId)
 		if closest.ID == a.owner.ID {
 			break
 		}
-		//searchMessage := protocol.NewMessage().MakeSearch(searchId, a.owner)
 		if i >= a.fingerTable.Len() {
 			tmp := closest.Search(searchId, &a.owner)
 			if tmp != nil {
@@ -251,9 +261,9 @@ func (a *Ring) MaintainNeighbors() {
 	var resList *PeerList
 
 	for i := 1; i <= a.neighbors.Len(); i++ {
-		peer := a.neighbors.Get(index - i%a.neighbors.Len())
+		peer := a.neighbors.Get(index - i%a.neighbors.Len()) // Attempt to get the neigh-list of our predecessor.
 		resList = peer.Notify(a.owner)
-		if resList == nil {
+		if resList == nil { //Neighbour is dead.
 			a.RemoveNeighbor(index - i%a.neighbors.Len())
 			i--
 		} else {
@@ -261,7 +271,7 @@ func (a *Ring) MaintainNeighbors() {
 		}
 		if i == resList.Len() {
 			log.Println("WARNING: ran out of neighbors")
-			a.AddNeighbour(*a.ClosestKnown(a.owner.ID))
+			a.AddNeighbour(*a.ClosestKnown(a.owner.ID)) //Doesn't necessarily add a neighbour, but runs the processing logic on it.
 		}
 	}
 
